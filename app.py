@@ -75,12 +75,23 @@ with st.sidebar:
     st.caption("Multi-LLM Agent Platform")
     st.divider()
 
-    # Load API keys from .env only
+    # Hybrid Approach: Load API keys from st.secrets (Cloud) or .env (Local)
     api_keys: dict = {}
     for name, meta in PROVIDERS.items():
         if meta["key_env"] is None:
             continue
-        api_keys[meta["key_env"]] = os.getenv(meta["key_env"], "")
+            
+        env_key = meta["key_env"]
+        
+        try:
+            # Try getting from Streamlit Secrets first
+            if env_key in st.secrets:
+                api_keys[env_key] = st.secrets[env_key]
+            else:
+                api_keys[env_key] = os.getenv(env_key, "")
+        except Exception:
+            # Fallback for local environment if secrets file doesn't exist
+            api_keys[env_key] = os.getenv(env_key, "")
 
     st.markdown(
         """
