@@ -36,11 +36,11 @@ logo_img = f'<img src="data:image/svg+xml;base64,{logo_b64}" width="40" />'
 # ── Provider Metadata ─────────────────────────────────────────────────────────
 PROVIDERS = {
     "Auto Agent": {"icon": "🤖", "model": "Smart Router", "key_env": None},
-    "Groq": {"icon": "⚡", "model": "LLaMA 3 8B", "key_env": "GROQ_API_KEY"},
-    "Gemini": {"icon": "🔵", "model": "Gemini 2.0 Flash", "key_env": "GEMINI_API_KEY"},
+    "Groq": {"icon": "⚡", "model": "LLaMA 3.1 8B", "key_env": "GROQ_API_KEY"},
+    "Gemini": {"icon": "🔵", "model": "Gemini 1.5 Flash", "key_env": "GEMINI_API_KEY"},
     "OpenRouter": {
         "icon": "🌐",
-        "model": "Mistral 7B",
+        "model": "LLaMA 3 8B",
         "key_env": "OPENROUTER_API_KEY",
     },
     "Hugging Face": {
@@ -82,12 +82,32 @@ with st.sidebar:
             continue
         api_keys[meta["key_env"]] = os.getenv(meta["key_env"], "")
 
-    st.subheader("📝 About")
-    st.write(
-        "AI Document Assistant is an intelligent multi-LLM platform. "
-        "It automatically routes your document queries to the optimal AI model "
-        "(Groq, Gemini, OpenRouter, or Hugging Face) based on the task type, "
-        "ensuring fast, accurate, and cost-effective responses."
+    st.markdown(
+        """
+## 📝 About
+
+AI Document Assistant is a production-grade Multi-LLM AI platform that intelligently analyzes documents and routes queries to the most suitable AI model. By leveraging Groq, Gemini, OpenRouter, and Hugging Face, the system delivers fast, accurate, and cost-effective responses through intelligent routing and automatic fallback mechanisms.
+
+### 🚀 Models Integrated
+
+* ⚡ LLaMA 3.1 8B (Groq)
+* 🔵 Gemini 1.5 Flash (Google)
+* 🌐 LLaMA 3 via OpenRouter
+* 🤗 Zephyr 7B (Hugging Face)
+
+### ✨ Key Features
+
+* Multi-LLM Architecture
+* Intelligent AI Agent Routing
+* Automatic Fallback Handling
+* PDF Document Question Answering
+* Real-Time Model Selection
+* Agent Decision Transparency
+* Modern Streamlit UI
+* Production-Ready Modular Design
+
+Built to demonstrate modern Generative AI, LLM orchestration, document intelligence, and scalable AI application development.
+        """
     )
 
     st.divider()
