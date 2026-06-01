@@ -1,6 +1,6 @@
 """
 openrouter_provider.py – OpenRouter adapter via REST API (no extra SDK needed).
-Model: mistralai/mistral-7b-instruct:free (free tier)
+Model: meta-llama/llama-3-8b-instruct:free (free tier)
 """
 import time
 import requests
@@ -11,7 +11,7 @@ class OpenRouterProvider(BaseProvider):
     name = "OpenRouter"
     icon = "🌐"
     color = "#10b981"
-    model_id = "mistralai/mistral-7b-instruct:free"
+    model_id = "meta-llama/llama-3-8b-instruct:free"
     BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
     def __init__(self, api_key: str):

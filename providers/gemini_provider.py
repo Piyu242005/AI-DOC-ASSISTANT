@@ -1,6 +1,6 @@
 """
 gemini_provider.py – Google Gemini adapter using the official google-genai SDK.
-Model: gemini-2.0-flash
+Model: gemini-1.5-flash
 """
 import time
 from typing import Optional
@@ -12,7 +12,7 @@ class GeminiProvider(BaseProvider):
     name = "Gemini"
     icon = "🔵"
     color = "#3b82f6"
-    model_id = "gemini-2.0-flash"
+    model_id = "gemini-1.5-flash"
 
     def __init__(self, api_key: str):
         self._api_key = api_key

@@ -1,6 +1,6 @@
 """
 groq_provider.py – Groq adapter using the official groq Python SDK.
-Model: llama3-8b-8192 (fast, great for coding tasks)
+Model: llama-3.1-8b-instant (fast, great for coding tasks)
 """
 import time
 from providers.base_provider import BaseProvider, ProviderResponse
@@ -10,7 +10,7 @@ class GroqProvider(BaseProvider):
     name = "Groq"
     icon = "⚡"
     color = "#f59e0b"
-    model_id = "llama3-8b-8192"
+    model_id = "llama-3.1-8b-instant"
 
     def __init__(self, api_key: str):
         self._api_key = api_key
