@@ -1,346 +1,249 @@
 """
-app.py – Multi-LLM AI Agent Platform
-Premium glassmorphism Streamlit UI with intelligent provider routing.
+app.py – AI Document Assistant · Multi-LLM Platform
+Clean default Streamlit UI with intelligent provider routing.
 """
 import os
+import time
+import base64
 import streamlit as st
 from dotenv import load_dotenv
 from pypdf import PdfReader
-from services.ai_router import build_providers, get_agent, get_all_provider_meta
-from utils.helpers import format_token_usage, status_badge, task_type_label
+
+from services.ai_router import build_providers, get_agent
+from utils.helpers import format_token_usage, task_type_label
 
 load_dotenv()
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AI Doc Agent",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    page_title="AI Document Assistant",
+    page_icon="📄",
+    layout="centered",
 )
 
-# ── CSS – Premium Dark Glassmorphism Theme ────────────────────────────────────
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+# ── Load Logo ─────────────────────────────────────────────────────────────────
+def get_base64_image(file_path):
+    with open(file_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
-*, *::before, *::after { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
-
-/* Dark background */
-.stApp { background: linear-gradient(135deg,#07070f 0%,#0d0d1a 60%,#070712 100%) !important; }
-
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background: rgba(13,13,26,0.95) !important;
-    border-right: 1px solid rgba(168,85,247,0.2) !important;
-}
-section[data-testid="stSidebar"] .stMarkdown p,
-section[data-testid="stSidebar"] label { color: #c4b5fd !important; font-size: 13px !important; }
-
-/* Hide default Streamlit chrome */
-#MainMenu, footer, header { visibility: hidden; }
-
-/* Headings */
-h1 { background: linear-gradient(90deg,#a855f7,#3b82f6); -webkit-background-clip: text;
-     -webkit-text-fill-color: transparent; font-weight: 800 !important; letter-spacing:-1px; }
-h2,h3 { color: #e2e8f0 !important; font-weight: 600 !important; }
-
-/* Glass card */
-.glass {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 16px;
-    padding: 20px 24px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    margin-bottom: 16px;
-}
-
-/* Provider badge */
-.provider-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 7px 16px; border-radius: 24px; font-size: 13px;
-    font-weight: 600; letter-spacing: 0.3px; margin-bottom: 12px;
-}
-
-/* Decision panel */
-.decision-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
-.decision-chip {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 10px; padding: 8px 14px; font-size: 12px; color: #cbd5e1;
-}
-.decision-chip strong { color: #e2e8f0; display: block; margin-bottom: 2px; }
-
-/* Fallback log */
-.fallback-item { font-size: 12px; color: #94a3b8; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-/* Inputs */
-.stTextInput input, .stTextArea textarea {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(168,85,247,0.3) !important;
-    border-radius: 10px !important; color: #e2e8f0 !important;
-}
-.stTextInput input:focus, .stTextArea textarea:focus {
-    border-color: #a855f7 !important;
-    box-shadow: 0 0 0 2px rgba(168,85,247,0.2) !important;
-}
-
-/* Buttons */
-.stButton > button {
-    background: linear-gradient(135deg,#7c3aed,#3b82f6) !important;
-    color: white !important; border: none !important;
-    border-radius: 10px !important; font-weight: 600 !important;
-    padding: 10px 24px !important; transition: all .2s ease !important;
-}
-.stButton > button:hover { opacity: 0.88 !important; transform: translateY(-1px) !important; }
-
-/* Radio – provider selector */
-div[role="radiogroup"] label {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 10px !important; padding: 8px 16px !important;
-    color: #cbd5e1 !important; cursor: pointer !important;
-    transition: all .2s ease !important;
-}
-div[role="radiogroup"] label:hover { border-color: #a855f7 !important; color:#e2e8f0 !important; }
-
-/* File uploader */
-[data-testid="stFileUploadDropzone"] {
-    background: rgba(255,255,255,0.03) !important;
-    border: 2px dashed rgba(168,85,247,0.4) !important;
-    border-radius: 14px !important;
-}
-
-/* Expander */
-details { background: rgba(255,255,255,0.03) !important; border-radius: 12px !important;
-          border: 1px solid rgba(255,255,255,0.08) !important; }
-summary { color: #c4b5fd !important; font-weight: 500 !important; }
-
-/* Alerts */
-.stAlert { border-radius: 12px !important; }
-</style>
-""", unsafe_allow_html=True)
-
-# ── Session State Defaults ────────────────────────────────────────────────────
-if "selected_mode" not in st.session_state:
-    st.session_state.selected_mode = "Auto Agent"
-if "last_decision" not in st.session_state:
-    st.session_state.last_decision = None
+logo_b64 = get_base64_image("assets/AI.svg")
+logo_img = f'<img src="data:image/svg+xml;base64,{logo_b64}" width="40" />'
 
 # ── Provider Metadata ─────────────────────────────────────────────────────────
-PROVIDER_META = {
-    "Gemini":       {"icon": "🔵", "color": "#3b82f6", "key_env": "GEMINI_API_KEY"},
-    "Groq":         {"icon": "⚡", "color": "#f59e0b", "key_env": "GROQ_API_KEY"},
-    "OpenRouter":   {"icon": "🌐", "color": "#10b981", "key_env": "OPENROUTER_API_KEY"},
-    "Hugging Face": {"icon": "🤗", "color": "#f97316", "key_env": "HUGGINGFACE_API_KEY"},
+PROVIDERS = {
+    "Auto Agent":   {"icon": "🤖", "model": "Smart Router",     "key_env": None},
+    "Groq":         {"icon": "⚡", "model": "LLaMA 3 8B",        "key_env": "GROQ_API_KEY"},
+    "Gemini":       {"icon": "🔵", "model": "Gemini 2.0 Flash", "key_env": "GEMINI_API_KEY"},
+    "OpenRouter":   {"icon": "🌐", "model": "Mistral 7B",        "key_env": "OPENROUTER_API_KEY"},
+    "Hugging Face": {"icon": "🤗", "model": "Zephyr 7B",         "key_env": "HUGGINGFACE_API_KEY"},
 }
+
+# ── Session State ─────────────────────────────────────────────────────────────
+for key, val in {
+    "selected_provider": "Auto Agent",
+    "last_decision": None,
+    "chat_history": [],
+    "doc_text": "",
+    "file_name": "",
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🤖 Multi-LLM Agent")
-    st.markdown("*AI Document Platform*")
-    st.divider()
-
-    # API Keys section
-    st.markdown("### 🔑 API Keys")
-    api_keys = {}
-    for name, meta in PROVIDER_META.items():
-        env_val = os.getenv(meta["key_env"], "")
-        user_val = st.text_input(
-            f"{meta['icon']} {name}",
-            value=env_val,
-            type="password",
-            key=f"key_{name}",
-            placeholder=f"Enter {name} API key…",
-        )
-        api_keys[meta["key_env"]] = user_val or env_val
-
-    st.divider()
-
-    # Provider status indicators
-    st.markdown("### 📡 Provider Status")
-    for name, meta in PROVIDER_META.items():
-        key = api_keys.get(meta["key_env"], "")
-        status = "🟢 Online" if key else "⚫ Offline"
-        st.markdown(
-            f'<div style="display:flex;justify-content:space-between;'
-            f'align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">'
-            f'<span style="color:#e2e8f0">{meta["icon"]} {name}</span>'
-            f'<span style="font-size:12px;color:#94a3b8">{status}</span></div>',
-            unsafe_allow_html=True,
-        )
-
-    st.divider()
     st.markdown(
-        '<p style="font-size:11px;color:#475569;text-align:center">'
-        'Fallback chain: Groq → Gemini → OpenRouter → HF</p>',
-        unsafe_allow_html=True,
+        f"""
+        <div style="display: flex; align-items: center; gap: 10px;">
+            {logo_img}
+            <h2 style="margin: 0;">AI Doc Assistant</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.caption("Multi-LLM Agent Platform")
+    st.divider()
+
+    # Load API keys from .env only
+    api_keys: dict = {}
+    for name, meta in PROVIDERS.items():
+        if meta["key_env"] is None:
+            continue
+        api_keys[meta["key_env"]] = os.getenv(meta["key_env"], "")
+
+    st.subheader("📝 About")
+    st.write(
+        "AI Document Assistant is an intelligent multi-LLM platform. "
+        "It automatically routes your document queries to the optimal AI model "
+        "(Groq, Gemini, OpenRouter, or Hugging Face) based on the task type, "
+        "ensuring fast, accurate, and cost-effective responses."
     )
 
-# ── Build providers & agent ───────────────────────────────────────────────────
+    st.divider()
+    st.caption("Fallback chain: Groq → Gemini → OpenRouter → HF")
+
+# ── Build Providers ───────────────────────────────────────────────────────────
 providers = build_providers(api_keys)
 
-# ── Main Content ──────────────────────────────────────────────────────────────
-st.markdown("# 📄 AI Document Agent")
+# ── Main Page ─────────────────────────────────────────────────────────────────
 st.markdown(
-    '<p style="color:#94a3b8;margin-top:-8px;margin-bottom:24px">'
-    "Upload a PDF and ask questions — powered by intelligent multi-LLM routing.</p>",
-    unsafe_allow_html=True,
+    f"""
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+        {logo_img}
+        <h1 style="margin: 0;">AI Document Assistant</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
+st.write("Upload a PDF and ask questions using intelligent multi-LLM routing.")
 
 # Provider Selector
-st.markdown("### 🎛️ Select AI Provider")
-mode_options = ["Auto Agent (Recommended)", "Groq ⚡", "Gemini 🔵", "OpenRouter 🌐", "Hugging Face 🤗"]
-mode_labels  = ["auto", "Groq", "Gemini", "OpenRouter", "Hugging Face"]
-
-selected_label = st.radio(
+robot_gif_b64 = get_base64_image("assets/happy-retro-robot.gif")
+st.markdown(
+    f'<img src="data:image/gif;base64,{robot_gif_b64}" width="150" />',
+    unsafe_allow_html=True
+)
+st.subheader("Select AI Provider")
+selected = st.radio(
     "Provider",
-    mode_options,
+    list(PROVIDERS.keys()),
     index=0,
     horizontal=True,
     label_visibility="collapsed",
+    key="selected_provider",
 )
-selected_mode = mode_labels[mode_options.index(selected_label)]
-
-# If a specific provider is chosen but not configured, warn
-if selected_mode != "auto" and selected_mode not in providers:
-    st.warning(
-        f"⚠️ **{selected_mode}** is not configured. Please add its API key in the sidebar."
-    )
+mode = "auto" if selected == "Auto Agent" else selected
+meta = PROVIDERS[selected]
+st.info(f"{meta['icon']} **{selected}** · {meta['model']}")
 
 st.divider()
 
 # PDF Upload
-st.markdown("### 📂 Upload Document")
-uploaded_file = st.file_uploader("Upload a PDF", type="pdf", label_visibility="collapsed")
+st.subheader("📂 Upload Document")
+uploaded = st.file_uploader("Upload a PDF", type="pdf")
 
-if not uploaded_file:
-    st.markdown(
-        '<div class="glass" style="text-align:center;color:#475569;padding:40px">'
-        "📄 Drop a PDF above to get started</div>",
-        unsafe_allow_html=True,
-    )
+if not uploaded:
     st.stop()
 
-# Extract text
-st.success("✅ Document uploaded successfully")
-reader = PdfReader(uploaded_file)
-doc_text = ""
-for page in reader.pages:
-    t = page.extract_text()
-    if t:
-        doc_text += t
-doc_text = doc_text[:15000]
+# Extract text on new upload
+if uploaded.name != st.session_state.file_name:
+    with st.spinner("Reading document…"):
+        reader = PdfReader(uploaded)
+        text = "".join(
+            p.extract_text() for p in reader.pages if p.extract_text()
+        )[:15000]
+    st.session_state.doc_text  = text
+    st.session_state.file_name = uploaded.name
+    st.session_state.chat_history = []
 
-with st.expander("👁️ Preview Document Text"):
-    st.write(doc_text[:2000] + ("…" if len(doc_text) > 2000 else ""))
+st.success(f"✅ **{uploaded.name}** uploaded — {len(PdfReader(uploaded).pages)} pages")
+
+with st.expander("👁️ Preview document text"):
+    st.write(st.session_state.doc_text[:2000] + "…")
 
 st.divider()
 
-# ── Question Interface ────────────────────────────────────────────────────────
-st.markdown("### 💬 Ask the Agent")
+# Chat history
+if st.session_state.chat_history:
+    st.subheader("💬 Conversation")
+    for msg in st.session_state.chat_history:
+        if msg["role"] == "user":
+            with st.chat_message("user"):
+                st.write(msg["content"])
+        else:
+            with st.chat_message("assistant"):
+                prov = msg.get("provider", "AI")
+                badge = (
+                    f"Auto Agent → **{prov}**"
+                    if mode == "auto" else f"Powered by **{prov}**"
+                )
+                st.caption(badge)
+                st.write(msg["content"])
 
-col1, col2 = st.columns([4, 1])
-with col1:
-    user_question = st.text_input(
+st.divider()
+
+# Question form
+st.subheader("🚀 Ask the Agent")
+
+with st.form("question_form", clear_on_submit=True):
+    question = st.text_input(
         "Question",
         placeholder="Ask anything about the document…",
         label_visibility="collapsed",
     )
-with col2:
-    summarize = st.button("📋 Summarise", use_container_width=True)
+    col1, col2, col3 = st.columns([3, 1.5, 1])
+    with col1:
+        ask = st.form_submit_button("🚀 Ask Agent", type="primary", use_container_width=True)
+    with col2:
+        summarize = st.form_submit_button("📋 Summarise", use_container_width=True)
+    with col3:
+        clear = st.form_submit_button("🗑️ Clear", use_container_width=True)
 
-ask = st.button("🚀 Ask AI Agent", use_container_width=False)
+if clear:
+    st.session_state.chat_history = []
+    st.session_state.last_decision = None
+    st.rerun()
 
-# Determine final question
-question = None
-if summarize:
-    question = "Provide a clear, concise summary of this document."
-elif ask and user_question:
-    question = user_question
-elif ask and not user_question:
+final_q = None
+if ask and question.strip():
+    final_q = question.strip()
+elif ask:
     st.warning("Please type a question first.")
+elif summarize:
+    final_q = "Provide a clear, concise summary of this document."
 
-# ── Agent Execution ───────────────────────────────────────────────────────────
-if question:
+if final_q:
     if not providers:
-        st.error("❌ No providers configured. Please add at least one API key in the sidebar.")
-        st.stop()
+        st.error("❌ No providers configured. Add at least one API key in the sidebar.")
+    else:
+        prompt = (
+            f"Answer the question using the document below.\n\n"
+            f"Document:\n{st.session_state.doc_text}\n\n"
+            f"Question:\n{final_q}"
+        )
+        agent = get_agent(providers, mode=mode)
 
-    prompt = f"""Answer the question using the document below.
+        with st.spinner("🤖 Agent is routing and generating response…"):
+            decision = agent.run(prompt)
 
-Document:
-{doc_text}
+        if decision.response.success:
+            st.session_state.chat_history.append({"role": "user", "content": final_q})
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": decision.response.text,
+                "provider": decision.response.provider,
+            })
+            st.session_state.last_decision = decision
+            st.rerun()
+        else:
+            err = decision.response.error or ""
+            if "429" in err or "quota" in err.lower():
+                st.error(
+                    "⚠️ **Quota Exceeded (429)** — Free tier limit reached.\n\n"
+                    "- Wait a few minutes and retry\n"
+                    "- Try a different provider\n"
+                    "- Enable billing on your API account"
+                )
+            else:
+                st.error(f"❌ {decision.response.text}")
 
-Question:
-{question}
-"""
-    agent = get_agent(providers, mode=selected_mode)
-
-    with st.spinner("🤖 Agent is routing and generating your response…"):
-        decision = agent.run(prompt)
-
-    st.session_state.last_decision = decision
-
-# ── Display Decision + Response ───────────────────────────────────────────────
+# Agent Decision Panel
 if st.session_state.last_decision:
     d = st.session_state.last_decision
     r = d.response
+    with st.expander("🧠 Agent Decision Panel"):
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Task Type", task_type_label(d.task_type))
+        col2.metric("Provider", r.provider)
+        col3.metric("Response Time", f"{r.response_time}s")
 
-    # ── Agent Decision Panel
-    st.markdown("### 🧠 Agent Decision Panel")
-    meta = PROVIDER_META.get(r.provider, {"icon": "🤖", "color": "#888"})
-    badge_color = meta["color"]
-    badge_icon  = meta["icon"]
+        col4, col5, col6 = st.columns(3)
+        col4.metric("Intended", d.selected_provider)
+        col5.metric("Tokens", format_token_usage(r.token_usage))
+        col6.metric("Fallback Used", "Yes ⚠️" if d.fallback_used else "No ✅")
 
-    st.markdown(
-        f'<div class="glass">'
-        f'<div class="decision-row">'
-        f'<div class="decision-chip"><strong>Task Type</strong>{task_type_label(d.task_type)}</div>'
-        f'<div class="decision-chip"><strong>Intended Provider</strong>{d.selected_provider}</div>'
-        f'<div class="decision-chip"><strong>Actual Provider</strong>{badge_icon} {r.provider}</div>'
-        f'<div class="decision-chip"><strong>Response Time</strong>⏱ {r.response_time}s</div>'
-        f'<div class="decision-chip"><strong>Token Usage</strong>{format_token_usage(r.token_usage)}</div>'
-        f'<div class="decision-chip"><strong>Fallback Used</strong>{"⚠️ Yes" if d.fallback_used else "✅ No"}</div>'
-        f'</div>'
-        f'<p style="margin-top:12px;font-size:13px;color:#94a3b8">💡 <strong style="color:#c4b5fd">Why:</strong> {d.reason}</p>'
-        + (
-            f'<details style="margin-top:8px"><summary style="font-size:12px;color:#64748b;cursor:pointer">🔁 Fallback Log</summary>'
-            + "".join(f'<div class="fallback-item">{entry}</div>' for entry in d.fallback_log)
-            + "</details>"
-            if d.fallback_log else ""
-        )
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+        st.info(f"💡 **Routing reason:** {d.reason}")
 
-    # ── Response
-    st.markdown("### 💬 Response")
-    if r.success:
-        # Auto-agent badge vs manual badge
-        if selected_mode == "auto":
-            badge_text = f"Auto Agent Selected: {r.provider}"
-        else:
-            badge_text = f"Powered by {r.provider}"
-
-        st.markdown(
-            f'<div class="provider-badge" style="background:{badge_color}22;'
-            f'border:1px solid {badge_color}55;color:{badge_color}">'
-            f'{badge_icon} {badge_text}</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<div class="glass">{r.text}</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        err = r.error or ""
-        if "429" in err or "quota" in err.lower():
-            st.error(
-                "⚠️ **Quota Exceeded (429):** Free tier limit reached.\n\n"
-                "- Wait a few minutes and retry\n"
-                "- Enable billing or use a different API key"
-            )
-        else:
-            st.error(f"❌ {r.text}")
+        if d.fallback_log:
+            st.write("**Fallback Log:**")
+            for entry in d.fallback_log:
+                st.caption(entry)
