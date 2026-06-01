@@ -1,6 +1,6 @@
 # flake8: noqa: E501
 """
-styles.py – Complete Design System · AI Doc Agent Platform
+styles.py – Complete Design System · NeuraFlow AI
 """
 
 

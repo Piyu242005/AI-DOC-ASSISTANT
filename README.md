@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🧠 Multi-LLM AI Document Agent
+# 🧠 NeuraFlow AI
 
-**Intelligently Analyze Documents & Route Queries to the Optimal AI Model**
+**Intelligent Multi-LLM Document Agent Platform**
 
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=20&pause=1000&color=8B5CF6&center=true&vCenter=true&width=600&lines=Analyze+PDFs+with+Generative+AI;Smart+Routing+Between+Top+LLMs;Production-Grade+AI+Architecture;Fast%2C+Accurate%2C+and+Cost-Effective)](https://git.io/typing-svg)
 
@@ -23,7 +23,7 @@
 
 ## 📝 Overview
 
-The **Multi-LLM AI Document Agent** is a production-grade orchestration platform that allows users to seamlessly extract insights from PDF documents using state-of-the-art Generative AI models. 
+**NeuraFlow AI** is a production-grade orchestration platform that allows users to seamlessly extract insights from PDF documents using state-of-the-art Generative AI models. 
 
 Instead of relying on a single AI provider, this architecture implements an **Intelligent Agent Router** that analyzes the intent of a user's question and dynamically selects the best-suited model (Groq, Gemini, OpenRouter, or Hugging Face) to answer it. By coupling dynamic routing with a robust **Chain-of-Responsibility Fallback Mechanism**, this application guarantees high availability, minimizes API costs, and avoids rate-limit failures—making it a perfect template for enterprise scalable AI solutions.
 

@@ -1,6 +1,6 @@
 # flake8: noqa: E501
 """
-app.py – AI Document Assistant · Multi-LLM Platform
+app.py – NeuraFlow AI · Intelligent Multi-LLM Document Agent Platform
 Clean default Streamlit UI with intelligent provider routing.
 """
 
@@ -18,7 +18,7 @@ load_dotenv(override=True)
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AI Document Assistant",
+    page_title="NeuraFlow AI",
     page_icon=r"C:\Users\Piyu\Downloads\AI-Doc-Assistant\assets\AI.svg",
     layout="centered",
 )
@@ -67,12 +67,12 @@ with st.sidebar:
         f"""
         <div style="display: flex; align-items: center; gap: 10px;">
             {logo_img}
-            <h2 style="margin: 0;">AI Doc Assistant</h2>
+            <h2 style="margin: 0;">NeuraFlow AI</h2>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.caption("Multi-LLM Agent Platform")
+    st.caption("Intelligent Multi-LLM Document Agent Platform")
     st.divider()
 
     # Hybrid Approach: Load API keys from st.secrets (Cloud) or .env (Local)
@@ -96,7 +96,7 @@ with st.sidebar:
     st.markdown("""
 ## 📝 About
 
-AI Document Assistant is a production-grade Multi-LLM AI platform that intelligently analyzes documents and routes queries to the most suitable AI model. By leveraging Groq, Gemini, OpenRouter, and Hugging Face, the system delivers fast, accurate, and cost-effective responses through intelligent routing and automatic fallback mechanisms.
+NeuraFlow AI is a production-grade Multi-LLM AI platform that intelligently analyzes documents and routes queries to the most suitable AI model. By leveraging Groq, Gemini, OpenRouter, and Hugging Face, the system delivers fast, accurate, and cost-effective responses through intelligent routing and automatic fallback mechanisms.
 
 ### 🚀 Models Integrated
 
@@ -130,7 +130,7 @@ st.markdown(
     f"""
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
         {logo_img}
-        <h1 style="margin: 0;">AI Document Assistant</h1>
+        <h1 style="margin: 0;">NeuraFlow AI</h1>
     </div>
     """,
     unsafe_allow_html=True,
