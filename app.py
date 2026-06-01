@@ -80,9 +80,9 @@ with st.sidebar:
     for name, meta in PROVIDERS.items():
         if meta["key_env"] is None:
             continue
-            
+
         env_key = meta["key_env"]
-        
+
         try:
             # Try getting from Streamlit Secrets first
             if env_key in st.secrets:
@@ -93,8 +93,7 @@ with st.sidebar:
             # Fallback for local environment if secrets file doesn't exist
             api_keys[env_key] = os.getenv(env_key, "")
 
-    st.markdown(
-        """
+    st.markdown("""
 ## 📝 About
 
 AI Document Assistant is a production-grade Multi-LLM AI platform that intelligently analyzes documents and routes queries to the most suitable AI model. By leveraging Groq, Gemini, OpenRouter, and Hugging Face, the system delivers fast, accurate, and cost-effective responses through intelligent routing and automatic fallback mechanisms.
@@ -118,8 +117,7 @@ AI Document Assistant is a production-grade Multi-LLM AI platform that intellige
 * Production-Ready Modular Design
 
 Built to demonstrate modern Generative AI, LLM orchestration, document intelligence, and scalable AI application development.
-        """
-    )
+        """)
 
     st.divider()
     st.caption("Fallback chain: Groq → Gemini → OpenRouter → HF")
