@@ -2,7 +2,9 @@
 groq_provider.py – Groq adapter using the official groq Python SDK.
 Model: llama-3.1-8b-instant (fast, great for coding tasks)
 """
+
 import time
+
 from providers.base_provider import BaseProvider, ProviderResponse
 
 
@@ -17,6 +19,7 @@ class GroqProvider(BaseProvider):
         self._client = None
         if api_key:
             from groq import Groq
+
             self._client = Groq(api_key=api_key)
 
     def is_configured(self) -> bool:

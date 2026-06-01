@@ -2,9 +2,11 @@
 gemini_provider.py – Google Gemini adapter using the official google-genai SDK.
 Model: gemini-1.5-flash
 """
+
 import time
-from typing import Optional
+
 from google import genai
+
 from providers.base_provider import BaseProvider, ProviderResponse
 
 

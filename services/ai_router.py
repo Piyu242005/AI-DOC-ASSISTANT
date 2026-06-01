@@ -2,13 +2,14 @@
 ai_router.py – AI Router Service.
 Builds configured provider instances and returns a ready AgentEngine.
 """
-import os
+
 from typing import Dict
+
 from providers.base_provider import BaseProvider
 from providers.gemini_provider import GeminiProvider
 from providers.groq_provider import GroqProvider
-from providers.openrouter_provider import OpenRouterProvider
 from providers.huggingface_provider import HuggingFaceProvider
+from providers.openrouter_provider import OpenRouterProvider
 from services.agent_engine import AgentEngine
 
 
@@ -42,8 +43,23 @@ def get_agent(providers: Dict[str, BaseProvider], mode: str = "auto") -> AgentEn
 def get_all_provider_meta() -> list:
     """Return static metadata for all providers (for UI display)."""
     return [
-        {"name": "Gemini",       "icon": "🔵", "color": "#3b82f6", "key_env": "GEMINI_API_KEY"},
-        {"name": "Groq",         "icon": "⚡", "color": "#f59e0b", "key_env": "GROQ_API_KEY"},
-        {"name": "OpenRouter",   "icon": "🌐", "color": "#10b981", "key_env": "OPENROUTER_API_KEY"},
-        {"name": "Hugging Face", "icon": "🤗", "color": "#f97316", "key_env": "HUGGINGFACE_API_KEY"},
+        {
+            "name": "Gemini",
+            "icon": "🔵",
+            "color": "#3b82f6",
+            "key_env": "GEMINI_API_KEY",
+        },
+        {"name": "Groq", "icon": "⚡", "color": "#f59e0b", "key_env": "GROQ_API_KEY"},
+        {
+            "name": "OpenRouter",
+            "icon": "🌐",
+            "color": "#10b981",
+            "key_env": "OPENROUTER_API_KEY",
+        },
+        {
+            "name": "Hugging Face",
+            "icon": "🤗",
+            "color": "#f97316",
+            "key_env": "HUGGINGFACE_API_KEY",
+        },
     ]

@@ -1,10 +1,12 @@
+# flake8: noqa: E501
 """
 app.py – AI Document Assistant · Multi-LLM Platform
 Clean default Streamlit UI with intelligent provider routing.
 """
-import os
-import time
+
 import base64
+import os
+
 import streamlit as st
 from dotenv import load_dotenv
 from pypdf import PdfReader
@@ -21,21 +23,31 @@ st.set_page_config(
     layout="centered",
 )
 
+
 # ── Load Logo ─────────────────────────────────────────────────────────────────
 def get_base64_image(file_path):
     with open(file_path, "rb") as f:
         return base64.b64encode(f.read()).decode()
+
 
 logo_b64 = get_base64_image("assets/AI.svg")
 logo_img = f'<img src="data:image/svg+xml;base64,{logo_b64}" width="40" />'
 
 # ── Provider Metadata ─────────────────────────────────────────────────────────
 PROVIDERS = {
-    "Auto Agent":   {"icon": "🤖", "model": "Smart Router",     "key_env": None},
-    "Groq":         {"icon": "⚡", "model": "LLaMA 3 8B",        "key_env": "GROQ_API_KEY"},
-    "Gemini":       {"icon": "🔵", "model": "Gemini 2.0 Flash", "key_env": "GEMINI_API_KEY"},
-    "OpenRouter":   {"icon": "🌐", "model": "Mistral 7B",        "key_env": "OPENROUTER_API_KEY"},
-    "Hugging Face": {"icon": "🤗", "model": "Zephyr 7B",         "key_env": "HUGGINGFACE_API_KEY"},
+    "Auto Agent": {"icon": "🤖", "model": "Smart Router", "key_env": None},
+    "Groq": {"icon": "⚡", "model": "LLaMA 3 8B", "key_env": "GROQ_API_KEY"},
+    "Gemini": {"icon": "🔵", "model": "Gemini 2.0 Flash", "key_env": "GEMINI_API_KEY"},
+    "OpenRouter": {
+        "icon": "🌐",
+        "model": "Mistral 7B",
+        "key_env": "OPENROUTER_API_KEY",
+    },
+    "Hugging Face": {
+        "icon": "🤗",
+        "model": "Zephyr 7B",
+        "key_env": "HUGGINGFACE_API_KEY",
+    },
 }
 
 # ── Session State ─────────────────────────────────────────────────────────────
@@ -58,7 +70,7 @@ with st.sidebar:
             <h2 style="margin: 0;">AI Doc Assistant</h2>
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
     st.caption("Multi-LLM Agent Platform")
     st.divider()
@@ -92,7 +104,7 @@ st.markdown(
         <h1 style="margin: 0;">AI Document Assistant</h1>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 st.write("Upload a PDF and ask questions using intelligent multi-LLM routing.")
 
@@ -110,7 +122,7 @@ st.markdown(
         </div>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 st.subheader("Select AI Provider")
 selected = st.radio(
@@ -138,10 +150,10 @@ if not uploaded:
 if uploaded.name != st.session_state.file_name:
     with st.spinner("Reading document…"):
         reader = PdfReader(uploaded)
-        text = "".join(
-            p.extract_text() for p in reader.pages if p.extract_text()
-        )[:15000]
-    st.session_state.doc_text  = text
+        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())[
+            :15000
+        ]
+    st.session_state.doc_text = text
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
 
@@ -164,7 +176,8 @@ if st.session_state.chat_history:
                 prov = msg.get("provider", "AI")
                 badge = (
                     f"Auto Agent → **{prov}**"
-                    if mode == "auto" else f"Powered by **{prov}**"
+                    if mode == "auto"
+                    else f"Powered by **{prov}**"
                 )
                 st.caption(badge)
                 st.write(msg["content"])
@@ -182,7 +195,9 @@ with st.form("question_form", clear_on_submit=True):
     )
     col1, col2, col3 = st.columns([3, 1.5, 1])
     with col1:
-        ask = st.form_submit_button("🚀 Ask Agent", type="primary", use_container_width=True)
+        ask = st.form_submit_button(
+            "🚀 Ask Agent", type="primary", use_container_width=True
+        )
     with col2:
         summarize = st.form_submit_button("📋 Summarise", use_container_width=True)
     with col3:
@@ -219,11 +234,13 @@ if final_q:
 
         if decision.response.success:
             st.session_state.chat_history.append({"role": "user", "content": final_q})
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": decision.response.text,
-                "provider": decision.response.provider,
-            })
+            st.session_state.chat_history.append(
+                {
+                    "role": "assistant",
+                    "content": decision.response.text,
+                    "provider": decision.response.provider,
+                }
+            )
             st.rerun()
         else:
             err = decision.response.error or ""

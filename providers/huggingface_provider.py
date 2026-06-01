@@ -2,8 +2,11 @@
 huggingface_provider.py – Hugging Face Inference API adapter via REST.
 Model: HuggingFaceH4/zephyr-7b-beta
 """
+
 import time
+
 import requests
+
 from providers.base_provider import BaseProvider, ProviderResponse
 
 

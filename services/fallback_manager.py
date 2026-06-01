@@ -2,7 +2,9 @@
 fallback_manager.py – Fault-tolerant fallback chain executor.
 Tries the preferred provider first, then walks the fallback chain on failure.
 """
+
 from typing import Dict, List, Tuple
+
 from providers.base_provider import BaseProvider, ProviderResponse
 
 # Global fallback order

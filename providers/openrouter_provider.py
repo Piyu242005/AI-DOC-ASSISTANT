@@ -2,8 +2,11 @@
 openrouter_provider.py – OpenRouter adapter via REST API (no extra SDK needed).
 Model: meta-llama/llama-3-8b-instruct:free (free tier)
 """
+
 import time
+
 import requests
+
 from providers.base_provider import BaseProvider, ProviderResponse
 
 
@@ -39,10 +42,14 @@ class OpenRouterProvider(BaseProvider):
             resp.raise_for_status()
             data = resp.json()
             usage_raw = data.get("usage", {})
-            usage = {
-                "input_tokens": usage_raw.get("prompt_tokens"),
-                "output_tokens": usage_raw.get("completion_tokens"),
-            } if usage_raw else None
+            usage = (
+                {
+                    "input_tokens": usage_raw.get("prompt_tokens"),
+                    "output_tokens": usage_raw.get("completion_tokens"),
+                }
+                if usage_raw
+                else None
+            )
             return ProviderResponse(
                 text=data["choices"][0]["message"]["content"],
                 provider=self.name,

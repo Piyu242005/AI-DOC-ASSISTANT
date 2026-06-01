@@ -2,22 +2,24 @@
 base_provider.py – Abstract base class and unified response format.
 All AI provider adapters must implement this interface.
 """
+
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
 @dataclass
 class ProviderResponse:
     """Unified response format returned by every provider adapter."""
+
     text: str
     provider: str
     model: str
-    response_time: float          # seconds
-    token_usage: Optional[dict]   # {"input_tokens": int, "output_tokens": int}
+    response_time: float  # seconds
+    token_usage: Optional[dict]  # {"input_tokens": int, "output_tokens": int}
     success: bool
     error: Optional[str] = None
-    fallback_used: bool = False   # True if this wasn't the originally selected provider
+    fallback_used: bool = False  # True if this wasn't the originally selected provider
 
 
 class BaseProvider(ABC):

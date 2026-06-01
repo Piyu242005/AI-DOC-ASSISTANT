@@ -2,20 +2,23 @@
 agent_engine.py – Agent Decision Engine.
 Decides which provider to use (auto or manual) and returns a structured AgentDecision.
 """
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+
+from dataclasses import dataclass
+from typing import Dict, List
+
 from providers.base_provider import BaseProvider, ProviderResponse
-from services.task_classifier import classify_task
 from services.fallback_manager import FallbackManager
+from services.task_classifier import classify_task
 
 
 @dataclass
 class AgentDecision:
     """Full decision record returned after each agent run."""
+
     task_type: str
-    selected_provider: str       # Provider the agent intended to use
-    actual_provider: str         # Provider that actually responded
-    reason: str                  # Why this provider was chosen
+    selected_provider: str  # Provider the agent intended to use
+    actual_provider: str  # Provider that actually responded
+    reason: str  # Why this provider was chosen
     response: ProviderResponse
     fallback_log: List[str]
     fallback_used: bool
@@ -39,7 +42,7 @@ class AgentEngine:
         else:
             task_type = "manual"
             preferred = self.mode
-            reason = f"Manually selected by user"
+            reason = "Manually selected by user"
 
         response, fallback_log = self._fallback_manager.execute_with_fallback(
             prompt=prompt,
