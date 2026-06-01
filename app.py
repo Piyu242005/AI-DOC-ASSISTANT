@@ -12,7 +12,7 @@ from pypdf import PdfReader
 from services.ai_router import build_providers, get_agent
 from utils.helpers import format_token_usage, task_type_label
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -205,6 +205,8 @@ if final_q:
         with st.spinner("🤖 Agent is routing and generating response…"):
             decision = agent.run(prompt)
 
+        st.session_state.last_decision = decision
+
         if decision.response.success:
             st.session_state.chat_history.append({"role": "user", "content": final_q})
             st.session_state.chat_history.append({
@@ -212,7 +214,6 @@ if final_q:
                 "content": decision.response.text,
                 "provider": decision.response.provider,
             })
-            st.session_state.last_decision = decision
             st.rerun()
         else:
             err = decision.response.error or ""
