@@ -1,0 +1,239 @@
+name: 🤖 Multi-LLM Agent CI/CD
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+# Cancel in-progress runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. Lint & Code Quality ───────────────────────────────────────────────────
+  lint:
+    name: 🔍 Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install lint tools
+        run: pip install flake8 black isort
+
+      - name: Run black (format check)
+        run: black --check --diff .
+
+      - name: Run isort (import order check)
+        run: isort --check-only --diff .
+
+      - name: Run flake8 (style & error check)
+        run: |
+          flake8 . \
+            --max-line-length=100 \
+            --exclude=.git,__pycache__,.venv,venv \
+            --ignore=E203,W503
+
+  # ── 2. Import & Syntax Validation ───────────────────────────────────────────
+  validate:
+    name: ✅ Import & Syntax Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check syntax of all Python files
+        run: |
+          find . -name "*.py" \
+            ! -path "./.git/*" \
+            ! -path "./.venv/*" \
+            -exec python -m py_compile {} \; \
+            && echo "✅ All files compile successfully"
+
+      - name: Validate provider modules import
+        run: |
+          python -c "from providers.base_provider import BaseProvider, ProviderResponse; print('✅ base_provider OK')"
+          python -c "from providers.gemini_provider import GeminiProvider; print('✅ gemini_provider OK')"
+          python -c "from providers.groq_provider import GroqProvider; print('✅ groq_provider OK')"
+          python -c "from providers.openrouter_provider import OpenRouterProvider; print('✅ openrouter_provider OK')"
+          python -c "from providers.huggingface_provider import HuggingFaceProvider; print('✅ huggingface_provider OK')"
+
+      - name: Validate service modules import
+        run: |
+          python -c "from services.task_classifier import classify_task; print('✅ task_classifier OK')"
+          python -c "from services.fallback_manager import FallbackManager; print('✅ fallback_manager OK')"
+          python -c "from services.agent_engine import AgentEngine, AgentDecision; print('✅ agent_engine OK')"
+          python -c "from services.ai_router import build_providers, get_agent; print('✅ ai_router OK')"
+          python -c "from utils.helpers import format_token_usage, status_badge, task_type_label; print('✅ helpers OK')"
+
+  # ── 3. Unit Tests ────────────────────────────────────────────────────────────
+  test:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run task classifier tests
+        run: |
+          python -c "
+          from services.task_classifier import classify_task
+
+          # Coding → Groq
+          task, provider, reason = classify_task('Can you write a python function to sort a list?')
+          assert provider == 'Groq', f'Expected Groq, got {provider}'
+          print(f'✅ Coding task → {provider}')
+
+          # Reasoning → OpenRouter
+          task, provider, reason = classify_task('Analyze and compare the pros and cons of this approach.')
+          assert provider == 'OpenRouter', f'Expected OpenRouter, got {provider}'
+          print(f'✅ Reasoning task → {provider}')
+
+          # Experimentation → HuggingFace
+          task, provider, reason = classify_task('Research the transformer neural model architecture.')
+          assert provider == 'Hugging Face', f'Expected Hugging Face, got {provider}'
+          print(f'✅ Experimentation task → {provider}')
+
+          # General → Gemini
+          task, provider, reason = classify_task('What is this document about?')
+          assert provider == 'Gemini', f'Expected Gemini, got {provider}'
+          print(f'✅ General task → {provider}')
+
+          print('✅ All routing tests passed!')
+          "
+
+      - name: Run helper utility tests
+        run: |
+          python -c "
+          from utils.helpers import format_token_usage, status_badge, task_type_label
+
+          assert format_token_usage(None) == 'N/A'
+          assert format_token_usage({'input_tokens': 10, 'output_tokens': 20}) == '↑ 10 in · ↓ 20 out'
+          assert status_badge(True) == '🟢 Online'
+          assert status_badge(False) == '⚫ Offline'
+          assert task_type_label('coding') == '💻 Coding'
+          print('✅ All helper tests passed!')
+          "
+
+      - name: Run ProviderResponse dataclass test
+        run: |
+          python -c "
+          from providers.base_provider import ProviderResponse
+          r = ProviderResponse(
+              text='Hello', provider='Gemini', model='gemini-2.0-flash',
+              response_time=1.2, token_usage=None, success=True
+          )
+          assert r.fallback_used == False
+          assert r.error is None
+          print('✅ ProviderResponse dataclass OK')
+          "
+
+  # ── 4. Security Check ────────────────────────────────────────────────────────
+  security:
+    name: 🔐 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run bandit security scan
+        run: |
+          bandit -r . \
+            --exclude ./.venv,./venv \
+            -ll \
+            --quiet
+
+      - name: Check no secrets committed
+        run: |
+          # Fail if any file (other than .env.example) contains a raw API key pattern
+          if grep -rn --include="*.py" "AIza\|sk-\|gsk_\|hf_" .; then
+            echo "❌ Possible API key found in source code! Remove it immediately."
+            exit 1
+          else
+            echo "✅ No hardcoded secrets detected"
+          fi
+
+  # ── 5. Dependency Audit ──────────────────────────────────────────────────────
+  dependency-audit:
+    name: 📦 Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies for vulnerabilities
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2022-42969
+
+  # ── 6. Build Summary (all jobs must pass) ───────────────────────────────────
+  ci-success:
+    name: 🎉 CI Pipeline Passed
+    runs-on: ubuntu-latest
+    needs: [lint, validate, test, security, dependency-audit]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint.result }}" == "success" &&
+                "${{ needs.validate.result }}" == "success" &&
+                "${{ needs.test.result }}" == "success" &&
+                "${{ needs.security.result }}" == "success" &&
+                "${{ needs.dependency-audit.result }}" == "success" ]]; then
+            echo "✅ All CI checks passed! Ready to deploy."
+          else
+            echo "❌ One or more CI checks failed."
+            exit 1
+          fi
+
+      - name: Post summary
+        run: |
+          echo "## 🤖 Multi-LLM Agent CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & Format | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Import Validation | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Audit | ${{ needs.dependency-audit.result }} |" >> $GITHUB_STEP_SUMMARY
