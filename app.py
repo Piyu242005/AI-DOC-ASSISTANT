@@ -17,7 +17,7 @@ load_dotenv(override=True)
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AI Document Assistant",
-    page_icon="📄",
+    page_icon=r"C:\Users\Piyu\Downloads\AI-Doc-Assistant\assets\AI.svg",
     layout="centered",
 )
 
@@ -99,7 +99,17 @@ st.write("Upload a PDF and ask questions using intelligent multi-LLM routing.")
 # Provider Selector
 robot_gif_b64 = get_base64_image("assets/happy-retro-robot.gif")
 st.markdown(
-    f'<img src="data:image/gif;base64,{robot_gif_b64}" width="150" />',
+    f"""
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+        <img src="data:image/gif;base64,{robot_gif_b64}" width="120" style="border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" />
+        <div>
+            <h2 style="margin: 0; font-size: 24px; color: #f8fafc;">Piyush Ramteke</h2>
+            <p style="margin: 4px 0 0 0; font-size: 15px; color: #94a3b8;">
+                Data Scientist & AI Engineer | Building intelligent multi-LLM solutions
+            </p>
+        </div>
+    </div>
+    """,
     unsafe_allow_html=True
 )
 st.subheader("Select AI Provider")
