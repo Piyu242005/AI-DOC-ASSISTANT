@@ -1,4 +1,5 @@
 import time
+from typing import Callable, Optional
 
 import chromadb
 
@@ -11,13 +12,14 @@ class RAGManager:
 
     def __init__(self, db_path="./chroma_db", collection_name="document_context"):
         self.client = chromadb.PersistentClient(path=db_path)
+        self.default_collection_name = collection_name
         self.collection_name = collection_name
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name
         )
 
     def _chunk_text(
-        self, text: str, chunk_size: int = 1000, overlap: int = 200
+        self, text: str, chunk_size: int = 1500, overlap: int = 100
     ) -> list:
         """Splits text into chunks of specified size with overlap."""
         chunks = []
@@ -31,30 +33,86 @@ class RAGManager:
             start = start + chunk_size - overlap
         return chunks
 
-    def index_document(self, document_text: str) -> int:
-        """
-        Chunks the document and stores it in the vector database.
-        Resets the collection for a fresh document session.
-        """
-        # Reset collection for the new document
-        try:
-            self.client.delete_collection(self.collection_name)
-        except Exception:
-            pass
+    def set_collection(self, collection_name: str):
+        """Sets the active collection for indexing and retrieval."""
+        self.collection_name = collection_name
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name
         )
 
+    def is_indexed(self, doc_hash: str) -> bool:
+        """Checks if a document with the given hash has already been indexed."""
+        collection_name = f"doc_{doc_hash}"
+        try:
+            # Check if collection exists and has documents
+            coll = self.client.get_collection(name=collection_name)
+            return coll.count() > 0
+        except Exception:
+            return False
+
+    def index_document(
+        self,
+        document_text: str,
+        doc_hash: Optional[str] = None,
+        metadata: Optional[dict] = None,
+        progress_callback: Optional[Callable[[str, int], None]] = None,
+    ) -> dict:
+        """
+        Chunks the document and stores it in the vector database.
+        Returns metrics dictionary.
+        """
+        start_time = time.time()
+
+        if doc_hash:
+            self.collection_name = f"doc_{doc_hash}"
+        else:
+            self.collection_name = self.default_collection_name
+            # Reset default collection
+            try:
+                self.client.delete_collection(self.collection_name)
+            except Exception:
+                pass
+
+        self.collection = self.client.get_or_create_collection(
+            name=self.collection_name
+        )
+
+        if progress_callback:
+            progress_callback("📖 Extracting Text...", 20)
+
+        if progress_callback:
+            progress_callback("✂️ Creating Chunks...", 40)
+
         chunks = self._chunk_text(document_text)
         if not chunks:
-            return 0
+            return {"chunks": 0, "embeddings": 0, "time": 0.0, "cache_hit": False}
+
+        if progress_callback:
+            progress_callback("🧠 Generating Embeddings...", 70)
 
         # Create unique IDs for each chunk
         ids = [f"chunk_{i}" for i in range(len(chunks))]
 
+        # Attach metadata to each chunk
+        metadatas = [metadata] * len(chunks) if metadata else None
+
+        if progress_callback:
+            progress_callback("💾 Building Vector Index...", 90)
+
         # Add to ChromaDB (automatically uses all-MiniLM-L6-v2 embeddings)
-        self.collection.add(documents=chunks, ids=ids)
-        return len(chunks)
+        self.collection.add(documents=chunks, ids=ids, metadatas=metadatas)
+
+        index_time = time.time() - start_time
+
+        if progress_callback:
+            progress_callback("✅ Ready for Search", 100)
+
+        return {
+            "chunks": len(chunks),
+            "embeddings": len(chunks),
+            "time": index_time,
+            "cache_hit": False,
+        }
 
     def retrieve_context(self, query: str, k: int = 5):
         """

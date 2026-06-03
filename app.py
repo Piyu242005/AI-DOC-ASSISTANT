@@ -5,7 +5,9 @@ Clean default Streamlit UI with intelligent provider routing.
 """
 
 import base64
+import hashlib
 import os
+from datetime import datetime
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -206,27 +208,88 @@ if not uploaded:
 
 # Extract text on new upload
 if uploaded.name != st.session_state.file_name:
-    with st.spinner("Reading and indexing document (RAG)…"):
-        reader = PdfReader(uploaded)
-        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())
+    file_bytes = uploaded.getvalue()
+    file_hash = hashlib.md5(file_bytes).hexdigest()
 
-        # Index document in ChromaDB
-        num_chunks = rag_manager.index_document(text)
-
-    st.session_state.doc_text = text
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
 
-    # Log the upload to Telegram and DB
-    telegram_logger.log_upload(uploaded.name, uploaded.size, len(reader.pages))
-    db_manager.log_document(
-        filename=uploaded.name,
-        pages=len(reader.pages),
-        chunks=num_chunks,
-        file_size=uploaded.size,
-    )
+    reader = PdfReader(uploaded)
+    num_pages = len(reader.pages)
 
-st.success(f"✅ **{uploaded.name}** uploaded — {len(PdfReader(uploaded).pages)} pages")
+    # Check if already indexed
+    if rag_manager.is_indexed(file_hash):
+        rag_manager.set_collection(f"doc_{file_hash}")
+        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())
+        st.session_state.doc_text = text
+        st.session_state.index_metrics = {
+            "chunks": "Cached",
+            "embeddings": "Cached",
+            "time": 0.0,
+            "pages": num_pages,
+            "cache_hit": True,
+        }
+    else:
+        progress_bar = st.progress(0)
+        status = st.empty()
+
+        def update_progress(msg, pct):
+            status.info(msg)
+            progress_bar.progress(pct)
+
+        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())
+
+        metadata = {
+            "filename": uploaded.name,
+            "pages": num_pages,
+            "indexed_at": datetime.now().isoformat(),
+            "hash": file_hash,
+        }
+
+        metrics = rag_manager.index_document(
+            document_text=text,
+            doc_hash=file_hash,
+            metadata=metadata,
+            progress_callback=update_progress,
+        )
+
+        st.session_state.doc_text = text
+        st.session_state.index_metrics = {
+            "chunks": metrics["chunks"],
+            "embeddings": metrics["embeddings"],
+            "time": metrics["time"],
+            "pages": num_pages,
+            "cache_hit": False,
+        }
+
+        status.empty()
+        progress_bar.empty()
+
+        # Log the upload to Telegram and DB
+        telegram_logger.log_upload(uploaded.name, uploaded.size, num_pages)
+        db_manager.log_document(
+            filename=uploaded.name,
+            pages=num_pages,
+            chunks=metrics["chunks"],
+            file_size=uploaded.size,
+        )
+
+m = st.session_state.get("index_metrics")
+if m:
+    cache_badge = "🟢 Cache Hit" if m["cache_hit"] else "🟡 Cache Miss"
+    st.success(f"✅ **{uploaded.name}** ready — {m['pages']} pages")
+
+    st.markdown(f"### 📊 Indexing Metrics  `{cache_badge}`")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("📄 Pages", m["pages"])
+    col2.metric("✂️ Chunks", m["chunks"])
+    col3.metric("🧠 Embeddings", m["embeddings"])
+    col4.metric(
+        "⏱️ Index Time",
+        f"{m['time']:.2f}s" if isinstance(m["time"], float) else m["time"],
+    )
+else:
+    st.success(f"✅ **{uploaded.name}** uploaded")
 
 with st.expander("👁️ Preview document text"):
     st.write(st.session_state.doc_text[:2000] + "…")
