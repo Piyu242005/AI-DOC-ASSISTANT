@@ -103,6 +103,7 @@ graph TD
 | **Frontend** | ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white) HTML5, CSS3 |
 | **Backend** | ![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white) |
 | **AI Models** | ![Gemini](https://img.shields.io/badge/Gemini_1.5_Flash-4285F4?style=flat-square&logo=google&logoColor=white) ![Groq](https://img.shields.io/badge/Groq_LLaMA_3.1-F55036?style=flat-square&logo=groq&logoColor=white) ![OpenRouter](https://img.shields.io/badge/OpenRouter-10B981?style=flat-square) ![HuggingFace](https://img.shields.io/badge/Zephyr_7B-FFD21E?style=flat-square&logo=huggingface&logoColor=black) |
+| **Agent Tools** | `Tavily Search API`, `DuckDuckGo Search API`, `ChromaDB`, `AST Secure Calculator` |
 | **Tooling** | `PyPDF`, `python-dotenv`, `requests`, `pytest`, `flake8`, `black` |
 
 </div>
@@ -123,9 +124,11 @@ AI-DOC-ASSISTANT/
 │   └── openrouter_provider.py
 ├── services/            # Core Engine & Routing Logic
 │   ├── agent_engine.py      # Orchestration
+│   ├── agent_executor.py    # ReAct Agent Loop
 │   ├── ai_router.py         # Factory
 │   ├── fallback_manager.py  # Chain-of-Responsibility
-│   └── task_classifier.py   # Intent Analysis
+│   ├── task_classifier.py   # Intent Analysis
+│   └── tool_registry.py     # Tool Definitions (Tavily, DDG, Calculator)
 ├── utils/               # UI Helpers & Formatting
 │   └── helpers.py
 ├── app.py               # Main Streamlit Interface

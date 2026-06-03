@@ -74,19 +74,78 @@ Then open your browser at **http://localhost:8501**
 
 ---
 
-## ☁️ Deploying to Streamlit Community Cloud
+## 🆕 Latest Features Added
 
-1. Push your code to GitHub (**do NOT push your `.env` file**)
-2. Go to [streamlit.io/cloud](https://streamlit.io/cloud) and connect your repo
-3. In **App Settings → Secrets**, add:
-```toml
-GEMINI_API_KEY = "your_key"
-GROQ_API_KEY = "your_key"
-OPENROUTER_API_KEY = "your_key"
-HUGGINGFACE_API_KEY = "your_key"
-```
+### 🤖 Autonomous ReAct Agent Framework
 
-The app auto-detects whether it's running locally (uses `.env`) or on the cloud (uses Streamlit Secrets).
+* Implemented a full ReAct (Reasoning + Acting) agent architecture.
+* Enables multi-step reasoning before generating answers.
+* Supports dynamic tool selection and execution.
+
+### 🔍 Multi-Provider Web Search
+
+* Integrated **Tavily AI Search** as the primary search provider for AI-optimized web retrieval.
+* Added **DuckDuckGo Search** as a fallback provider for high availability.
+* Automatically switches providers if the primary search fails.
+
+### 📄 Intelligent Document Search
+
+* Connected Agent Tools directly with the ChromaDB vector database.
+* Agent can decide when to search uploaded documents instead of always injecting document context.
+* Improves response quality and reduces unnecessary token usage.
+
+### 🧮 Secure Calculator Tool
+
+* Built a safe calculator using Python AST parsing.
+* Eliminates security risks associated with `eval()`.
+* Supports mathematical reasoning and calculations.
+
+### ⚡ Real-Time Streaming Responses
+
+* ChatGPT-style token streaming experience.
+* Native streaming support for Groq and Gemini.
+* Optimized pseudo-streaming for OpenRouter and Hugging Face.
+
+### 🧠 Conversation Memory
+
+* Sliding-window memory architecture.
+* Maintains contextual conversations across multiple interactions.
+* Optimized with token and history limits.
+
+### 📚 Enterprise RAG Pipeline
+
+* ChromaDB-powered vector database.
+* Semantic search and retrieval.
+* Persistent document indexing.
+* Custom chunking and embedding workflow.
+
+### 📊 Analytics & Telemetry Dashboard
+
+* SQLite-powered analytics engine.
+* Interactive Plotly dashboards.
+* Provider performance tracking.
+* Query, latency, fallback, and retrieval analytics.
+
+### 📡 Monitoring & Observability
+
+* Telegram-based telemetry system.
+* Real-time query monitoring.
+* Error and fallback notifications.
+* Provider health tracking.
+
+### 🔄 Multi-LLM Orchestration
+
+* Gemini
+* Groq
+* OpenRouter
+* Hugging Face
+
+### 🛡️ Reliability Features
+
+* Automatic fallback recovery.
+* Multi-provider search fallback.
+* Stream failure handling.
+* Production-grade error management.
 
 ---
 
