@@ -218,7 +218,7 @@ if not uploaded:
 # Extract text on new upload
 if uploaded.name != st.session_state.file_name:
     file_bytes = uploaded.getvalue()
-    file_hash = hashlib.md5(file_bytes).hexdigest()
+    file_hash = hashlib.md5(file_bytes, usedforsecurity=False).hexdigest()
 
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
