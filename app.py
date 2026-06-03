@@ -12,9 +12,13 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 
 from services.ai_router import build_providers, get_agent
+from services.telegram_logger import TelegramLogger
 from utils.helpers import format_token_usage, task_type_label
 
 load_dotenv(override=True)
+
+# Initialize Telegram Logger
+telegram_logger = TelegramLogger()
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -185,6 +189,9 @@ if uploaded.name != st.session_state.file_name:
     st.session_state.doc_text = text
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
+    
+    # Log the upload to Telegram
+    telegram_logger.log_upload(uploaded.name, uploaded.size, len(reader.pages))
 
 st.success(f"✅ **{uploaded.name}** uploaded — {len(PdfReader(uploaded).pages)} pages")
 
@@ -262,6 +269,13 @@ if final_q:
         st.session_state.last_decision = decision
 
         if decision.response.success:
+            telegram_logger.log_query(
+                document_name=st.session_state.file_name,
+                question=final_q,
+                provider=decision.response.provider,
+                response_time=decision.response.response_time,
+                fallback_used=decision.fallback_used
+            )
             st.session_state.chat_history.append({"role": "user", "content": final_q})
             st.session_state.chat_history.append(
                 {
@@ -273,6 +287,7 @@ if final_q:
             st.rerun()
         else:
             err = decision.response.error or ""
+            telegram_logger.log_error(provider=decision.selected_provider, error_msg=err)
             if "429" in err or "quota" in err.lower():
                 st.error(
                     "⚠️ **Quota Exceeded (429)** — Free tier limit reached.\n\n"

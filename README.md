@@ -29,6 +29,14 @@ Instead of relying on a single AI provider, this architecture implements an **In
 
 ---
 
+## 📡 Telegram Monitoring
+
+- Real-time upload notifications
+- Query analytics tracking
+- Provider performance monitoring
+- Error and fallback alerts
+- Non-blocking background execution
+
 ## ✨ Key Features
 
 | Feature | Description |
@@ -54,18 +62,23 @@ graph TD
     classDef llm fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef fallback fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef engine fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef telemetry fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff,rx:8px,ry:8px;
 
-    U((👤 User)):::user -->|Uploads PDF & Asks Question| R[🧠 Intelligent AI Router]:::router
+    U(("👤 User")):::user -->|"Uploads PDF & Asks Question"| R["🧠 Intelligent AI Router"]:::router
     
-    R -->|Classifies Task & Selects Provider| FE[⚙️ Fallback Execution Engine]:::fallback
+    R -->|"Classifies Task & Selects Provider"| FE["⚙️ Fallback Execution Engine"]:::fallback
     
-    FE -.->|Primary| G[⚡ Groq LLaMA 3.1]:::llm
-    FE -.->|Fallback 1| GEM[🔵 Gemini 1.5 Flash]:::llm
-    FE -.->|Fallback 2| OR[🌐 OpenRouter]:::llm
-    FE -.->|Fallback 3| HF[🤗 Hugging Face]:::llm
+    FE -.->|"Primary"| G["⚡ Groq LLaMA 3.1"]:::llm
+    FE -.->|"Fallback 1"| GEM["🔵 Gemini 1.5 Flash"]:::llm
+    FE -.->|"Fallback 2"| OR["🌐 OpenRouter"]:::llm
+    FE -.->|"Fallback 3"| HF["🤗 Hugging Face"]:::llm
     
-    G & GEM & OR & HF -->|Generates Answer| RE[📊 Response & Decision UI]:::engine
-    RE -->|Displays Insights| U
+    G & GEM & OR & HF -->|"Generates Answer"| RE["📊 Response & Decision UI"]:::engine
+    RE -->|"Displays Insights"| U
+
+    TL["📡 Telegram Background Logger"]:::telemetry
+    R -.->|"Async Log: Uploads"| TL
+    RE -.->|"Async Log: Queries & Errors"| TL
 ```
 
 ---
