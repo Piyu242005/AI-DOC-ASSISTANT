@@ -134,7 +134,7 @@ Built to demonstrate modern Generative AI, LLM orchestration, document intellige
         """)
 
     st.divider()
-    st.caption("Fallback chain: Groq → Gemini → OpenRouter → HF")
+    st.caption("🛡️ Autonomous Fallback & Recovery Engine | Built By Piyush Ramteke")
 
 # ── Build Providers ───────────────────────────────────────────────────────────
 providers = build_providers(api_keys)
@@ -206,27 +206,71 @@ if not uploaded:
 
 # Extract text on new upload
 if uploaded.name != st.session_state.file_name:
-    with st.spinner("Reading and indexing document (RAG)…"):
-        reader = PdfReader(uploaded)
-        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())
+    import hashlib
 
-        # Index document in ChromaDB
-        num_chunks = rag_manager.index_document(text)
+    file_bytes = uploaded.getvalue()
+    file_hash = hashlib.md5(file_bytes).hexdigest()
 
-    st.session_state.doc_text = text
+    # Reset states for the new file
+    st.session_state.doc_text = ""
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
 
-    # Log the upload to Telegram and DB
-    telegram_logger.log_upload(uploaded.name, uploaded.size, len(reader.pages))
-    db_manager.log_document(
-        filename=uploaded.name,
-        pages=len(reader.pages),
-        chunks=num_chunks,
-        file_size=uploaded.size,
-    )
+    # Create the progress UI
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-st.success(f"✅ **{uploaded.name}** uploaded — {len(PdfReader(uploaded).pages)} pages")
+    reader = PdfReader(uploaded)
+    text = "".join(p.extract_text() for p in reader.pages if p.extract_text())
+
+    # Index document incrementally
+    cache_hit = False
+    num_chunks = 0
+    index_time = 0.0
+    for (
+        progress_percent,
+        msg,
+        is_hit,
+        total_chunks,
+        time_taken,
+    ) in rag_manager.index_document(text, file_hash):
+        progress_bar.progress(progress_percent)
+        status_text.info(msg)
+        cache_hit = is_hit
+        num_chunks = total_chunks
+        index_time = time_taken
+
+    st.session_state.doc_text = text
+
+    # Log the upload to Telegram and DB
+    if not cache_hit:
+        telegram_logger.log_upload(uploaded.name, uploaded.size, len(reader.pages))
+        db_manager.log_document(
+            filename=uploaded.name,
+            pages=len(reader.pages),
+            chunks=num_chunks,
+            file_size=uploaded.size,
+        )
+
+    # Success UI
+    progress_bar.empty()
+    status_text.empty()
+
+    if cache_hit:
+        st.success(
+            f"⚡ **{uploaded.name}** already indexed (Cache Hit) — {len(reader.pages)} pages"
+        )
+    else:
+        st.success(
+            f"✅ **{uploaded.name}** successfully indexed — {len(reader.pages)} pages"
+        )
+
+    # Metrics Panel
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("📄 Pages", len(reader.pages))
+    col2.metric("✂️ Chunks", num_chunks)
+    col3.metric("🧠 Embeddings", num_chunks)
+    col4.metric("⏱️ Index Time", f"{index_time:.1f}s")
 
 with st.expander("👁️ Preview document text"):
     st.write(st.session_state.doc_text[:2000] + "…")

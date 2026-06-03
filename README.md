@@ -45,6 +45,8 @@ Engineered an autonomous AI Agent platform integrating Enterprise RAG, ChromaDB 
 | 🧠 **Intelligent Agent Routing** | Automatically classifies queries (Coding, Reasoning, General) to pick the best model. |
 | 🛡️ **Automatic Fallback System** | Seamlessly reroutes failed API requests (e.g., 429 Quota limits) to backup providers. |
 | 📄 **PDF Document Analysis** | Extracts and processes text from large PDF documents using `pypdf`. |
+| ⚡ **Hash-Based Vector Caching** | Calculates MD5 checksums of uploads to instantly hit ChromaDB cache for previously uploaded files. |
+| 🔄 **Incremental Vector Batching** | Uses yielding generators to chunk and embed documents in batches, updating a live Streamlit progress UI without freezing the main thread. |
 | 🔍 **AI Decision Transparency** | An expander panel reveals *why* a model was chosen, token usage, and latency. |
 | ⚡ **Real-Time Model Selection** | Toggle between "Auto Agent" mode or manually force a specific LLM to respond. |
 | 🎨 **Modern UI/UX** | Premium Dark-mode Streamlit interface with glassmorphism effects and animations. |
