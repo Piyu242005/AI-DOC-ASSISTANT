@@ -14,7 +14,7 @@ class OpenRouterProvider(BaseProvider):
     name = "OpenRouter"
     icon = "🌐"
     color = "#10b981"
-    model_id = "meta-llama/llama-3-8b-instruct:free"
+    model_id = "openrouter/free"
     BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
     def __init__(self, api_key: str):

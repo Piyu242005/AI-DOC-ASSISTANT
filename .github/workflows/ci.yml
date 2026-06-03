@@ -44,7 +44,7 @@ jobs:
           python -c "from app import main" || echo "App Import check (may require Streamlit context)"
           python -c "from providers.base_provider import BaseProvider"
           python -c "from services.agent_engine import AgentEngine"
-          python -c "from services.rag_engine import RAGEngine"
+          python -c "from services.rag_engine import RAGManager"
           python -c "from services.telegram_logger import TelegramLogger"
           python -c "from utils.helpers import format_token_usage"
 
