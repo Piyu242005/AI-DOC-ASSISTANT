@@ -5,3 +5,7 @@ pypdf
 python-dotenv
 requests
 chromadb
+plotly
+pandas
+duckduckgo-search
+tavily-python

@@ -68,3 +68,26 @@ class OpenRouterProvider(BaseProvider):
                 success=False,
                 error=str(e),
             )
+
+    def generate_stream(self, prompt: str, timeout: int = 30):
+        # Pseudo-streaming for REST APIs
+        start = time.time()
+        response = self.generate(prompt, timeout=timeout)
+
+        if not response.success:
+            yield f"\n\n[Stream Error: {response.error}]"
+            response.first_token_time = round(time.time() - start, 2)
+            return response
+
+        first_token_time = time.time() - start
+
+        # Stream word by word
+        words = response.text.split(" ")
+        for i, word in enumerate(words):
+            # yield with trailing space, except last word
+            content = word + " " if i < len(words) - 1 else word
+            yield content
+            time.sleep(0.01)  # tiny delay to simulate streaming effect
+
+        response.first_token_time = round(first_token_time, 2)
+        return response

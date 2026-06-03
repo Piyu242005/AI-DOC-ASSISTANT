@@ -2,7 +2,7 @@
 
 # 🧠 NeuraFlow AI
 
-**Intelligent Multi-LLM Document Agent Platform**
+**Enterprise RAG & Multi-LLM Document Intelligence Platform**
 
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=20&pause=1000&color=8B5CF6&center=true&vCenter=true&width=600&lines=Analyze+PDFs+with+Generative+AI;Smart+Routing+Between+Top+LLMs;Production-Grade+AI+Architecture;Fast%2C+Accurate%2C+and+Cost-Effective)](https://git.io/typing-svg)
 
@@ -23,9 +23,9 @@
 
 ## 📝 Overview
 
-**NeuraFlow AI** is a production-grade orchestration platform that allows users to seamlessly extract insights from PDF documents using state-of-the-art Generative AI models. 
+**NeuraFlow AI – Enterprise RAG & Autonomous Multi-LLM Agent Platform**
 
-Instead of relying on a single AI provider, this architecture implements an **Intelligent Agent Router** that analyzes the intent of a user's question and dynamically selects the best-suited model (Groq, Gemini, OpenRouter, or Hugging Face) to answer it. By coupling dynamic routing with a robust **Chain-of-Responsibility Fallback Mechanism**, this application guarantees high availability, minimizes API costs, and avoids rate-limit failures—making it a perfect template for enterprise scalable AI solutions.
+Engineered an autonomous AI Agent platform integrating Enterprise RAG, ChromaDB vector search, conversation memory, real-time streaming responses, multi-LLM orchestration, intelligent tool calling (multi-provider web search via Tavily/DuckDuckGo, document retrieval, calculator), telemetry monitoring, and analytics dashboards for scalable document intelligence and reasoning workflows.
 
 ---
 
@@ -63,22 +63,33 @@ graph TD
     classDef fallback fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef engine fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef telemetry fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef db fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef rag fill:#f43f5e,stroke:#e11d48,stroke-width:2px,color:#fff,rx:8px,ry:8px;
 
-    U(("👤 User")):::user -->|"Uploads PDF & Asks Question"| R["🧠 Intelligent AI Router"]:::router
+    U(("👤 User")):::user -->|"Uploads PDF"| EXT["📄 Text Extraction & Chunking"]:::rag
+    EXT -->|"Embeds"| CHROMA[("🗄️ ChromaDB Vector Store")]:::db
     
+    U -->|"Asks Question"| SEM["🔍 Agent Executor (ReAct)"]:::router
+    SEM -->|"Accesses Memory"| MEM["💭 Conversation Memory"]:::router
+    MEM -->|"Context + History + Question"| R["🧠 Intelligent AI Router"]:::router
     R -->|"Classifies Task & Selects Provider"| FE["⚙️ Fallback Execution Engine"]:::fallback
     
-    FE -.->|"Primary"| G["⚡ Groq LLaMA 3.1"]:::llm
-    FE -.->|"Fallback 1"| GEM["🔵 Gemini 1.5 Flash"]:::llm
-    FE -.->|"Fallback 2"| OR["🌐 OpenRouter"]:::llm
-    FE -.->|"Fallback 3"| HF["🤗 Hugging Face"]:::llm
+    FE -.->|"Stream 1"| G["⚡ Groq LLaMA 3.1"]:::llm
+    FE -.->|"Stream 2"| GEM["🔵 Gemini 1.5 Flash"]:::llm
+    FE -.->|"Stream 3"| OR["🌐 OpenRouter"]:::llm
+    FE -.->|"Stream 4"| HF["🤗 Hugging Face"]:::llm
     
-    G & GEM & OR & HF -->|"Generates Answer"| RE["📊 Response & Decision UI"]:::engine
-    RE -->|"Displays Insights"| U
+    G & GEM & OR & HF -->|"Yields Thought/Action"| WR["🔄 Stream Wrapper"]:::engine
+    WR -->|"Detects Tool Action"| TR["🛠️ Tool Registry"]:::router
+    TR -->|"Executes Calculator / Web Search / Document Search"| TR
+    TR -->|"Observation"| R
+    
+    WR -->|"Streams Final Answer"| RE["📊 Live UI Streaming"]:::engine
+    RE -->|"Displays Tokens"| U
 
-    TL["📡 Telegram Background Logger"]:::telemetry
-    R -.->|"Async Log: Uploads"| TL
-    RE -.->|"Async Log: Queries & Errors"| TL
+    TL["📡 Telegram & SQLite Analytics"]:::telemetry
+    EXT -.->|"Logs Upload"| TL
+    WR -.->|"Logs Performance Metadata"| TL
 ```
 
 ---

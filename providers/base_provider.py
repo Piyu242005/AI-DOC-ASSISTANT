@@ -20,6 +20,7 @@ class ProviderResponse:
     success: bool
     error: Optional[str] = None
     fallback_used: bool = False  # True if this wasn't the originally selected provider
+    first_token_time: float = 0.0  # seconds until first token was received
 
 
 class BaseProvider(ABC):
@@ -32,6 +33,14 @@ class BaseProvider(ABC):
     @abstractmethod
     def generate(self, prompt: str, timeout: int = 30) -> ProviderResponse:
         """Send a prompt and return a unified ProviderResponse."""
+        pass
+
+    @abstractmethod
+    def generate_stream(self, prompt: str, timeout: int = 30):
+        """
+        Yields strings (tokens) as they arrive.
+        Finally yields a ProviderResponse object containing metadata.
+        """
         pass
 
     @abstractmethod

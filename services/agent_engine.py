@@ -24,6 +24,34 @@ class AgentDecision:
     fallback_used: bool
 
 
+class StreamWrapper:
+    """Wraps a generator to catch its final return value (ProviderResponse)."""
+
+    def __init__(self, generator, task_type, preferred, reason, fallback_log):
+        self.generator = generator
+        self.task_type = task_type
+        self.preferred = preferred
+        self.reason = reason
+        self.fallback_log = fallback_log
+        self.final_decision = None
+
+    def __iter__(self):
+        try:
+            while True:
+                yield next(self.generator)
+        except StopIteration as e:
+            response = e.value
+            self.final_decision = AgentDecision(
+                task_type=self.task_type,
+                selected_provider=self.preferred,
+                actual_provider=response.provider,
+                reason=self.reason,
+                response=response,
+                fallback_log=self.fallback_log,
+                fallback_used=response.fallback_used,
+            )
+
+
 class AgentEngine:
     """
     Orchestrates task classification → provider selection → execution with fallback.
@@ -58,3 +86,19 @@ class AgentEngine:
             fallback_log=fallback_log,
             fallback_used=response.fallback_used,
         )
+
+    def run_stream(self, prompt: str, status_callback=None) -> StreamWrapper:
+        if self.mode == "auto":
+            task_type, preferred, reason = classify_task(prompt)
+        else:
+            task_type = "manual"
+            preferred = self.mode
+            reason = "Manually selected by user"
+
+        generator, fallback_log = self._fallback_manager.execute_stream_with_fallback(
+            prompt=prompt,
+            preferred_provider=preferred,
+            status_callback=status_callback,
+        )
+
+        return StreamWrapper(generator, task_type, preferred, reason, fallback_log)

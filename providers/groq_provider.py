@@ -57,3 +57,55 @@ class GroqProvider(BaseProvider):
                 success=False,
                 error=str(e),
             )
+
+    def generate_stream(self, prompt: str, timeout: int = 30):
+        start = time.time()
+        first_token_time = 0.0
+        full_text = []
+
+        # Note: exceptions here bubble up on the first next() call
+        stream = self._client.chat.completions.create(
+            model=self.model_id,
+            messages=[{"role": "user", "content": prompt}],
+            timeout=timeout,
+            stream=True,
+        )
+
+        try:
+            for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    if first_token_time == 0.0:
+                        first_token_time = time.time() - start
+                    full_text.append(content)
+                    yield content
+
+            response_time = time.time() - start
+            final_text = "".join(full_text)
+            # Approximate usage
+            usage = {
+                "input_tokens": len(prompt) // 4,
+                "output_tokens": len(final_text) // 4,
+            }
+            return ProviderResponse(
+                text=final_text,
+                provider=self.name,
+                model=self.model_id,
+                response_time=round(response_time, 2),
+                token_usage=usage,
+                success=True,
+                first_token_time=round(first_token_time, 2),
+            )
+        except Exception as e:
+            response_time = time.time() - start
+            yield f"\n\n[Stream Error: {str(e)}]"
+            return ProviderResponse(
+                text="".join(full_text),
+                provider=self.name,
+                model=self.model_id,
+                response_time=round(response_time, 2),
+                token_usage=None,
+                success=False,
+                error=str(e),
+                first_token_time=round(first_token_time, 2),
+            )

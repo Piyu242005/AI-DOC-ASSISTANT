@@ -11,9 +11,13 @@ import streamlit as st
 from dotenv import load_dotenv
 from pypdf import PdfReader
 
+from services.agent_executor import AgentExecutor
 from services.ai_router import build_providers, get_agent
+from services.db_manager import DBManager
+from services.memory_manager import MemoryManager
 from services.rag_engine import RAGManager
 from services.telegram_logger import TelegramLogger
+from services.tool_registry import ToolRegistry
 from utils.helpers import format_token_usage, task_type_label
 
 load_dotenv(override=True)
@@ -21,6 +25,8 @@ load_dotenv(override=True)
 # Initialize global services
 telegram_logger = TelegramLogger()
 rag_manager = RAGManager()
+db_manager = DBManager()
+memory_manager = MemoryManager()
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -64,6 +70,7 @@ for key, val in {
     "doc_text": "",
     "file_name": "",
     "last_rag_metrics": {},
+    "last_memory_metrics": {},
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -173,6 +180,21 @@ mode = "auto" if selected == "Auto Agent" else selected
 meta = PROVIDERS[selected]
 st.info(f"{meta['icon']} **{selected}** · {meta['model']}")
 
+st.info(f"{meta['icon']} **{selected}** · {meta['model']}")
+
+st.divider()
+st.markdown("### 🛠️ Agent Settings")
+enable_tools = st.checkbox(
+    "☑ Enable Agent Tools (ReAct Mode)",
+    value=True,
+    help="Allows the AI to use Web Search, Calculator, and Document Search.",
+)
+show_reasoning = st.checkbox(
+    "☑ Show Agent Reasoning",
+    value=True,
+    help="Streams the Agent's internal Thought and Action process.",
+)
+
 st.divider()
 
 # PDF Upload
@@ -195,8 +217,14 @@ if uploaded.name != st.session_state.file_name:
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
 
-    # Log the upload to Telegram
+    # Log the upload to Telegram and DB
     telegram_logger.log_upload(uploaded.name, uploaded.size, len(reader.pages))
+    db_manager.log_document(
+        filename=uploaded.name,
+        pages=len(reader.pages),
+        chunks=num_chunks,
+        file_size=uploaded.size,
+    )
 
 st.success(f"✅ **{uploaded.name}** uploaded — {len(PdfReader(uploaded).pages)} pages")
 
@@ -261,29 +289,116 @@ if final_q:
     if not providers:
         st.error("❌ No providers configured. Add at least one API key in the sidebar.")
     else:
-        with st.spinner("🔍 Retrieving semantic context…"):
-            context_str, sim_score, ret_time, n_chunks = rag_manager.retrieve_context(
-                final_q
-            )
-            st.session_state.last_rag_metrics = {
-                "chunks": n_chunks,
-                "score": sim_score,
-                "time": ret_time,
-            }
-
-        prompt = (
-            f"Answer the question using the document context below.\n\n"
-            f"Document Context:\n{context_str}\n\n"
-            f"Question:\n{final_q}"
-        )
         agent = get_agent(providers, mode=mode)
+        status_placeholder = st.empty()
 
-        with st.spinner("🤖 Agent is routing and generating response…"):
-            decision = agent.run(prompt)
+        def update_status(msg):
+            status_placeholder.info(msg)
 
-        st.session_state.last_decision = decision
+        if enable_tools:
+            # --- ReAct Agent Mode ---
+            with st.spinner("🔍 Loading memory and tools..."):
+                mem_ctx, mem_tokens, mem_turns = memory_manager.get_context(
+                    st.session_state.chat_history, max_turns=3, max_tokens=1500
+                )
+
+                st.session_state.last_memory_metrics = {
+                    "hit": mem_turns > 0,
+                    "tokens": mem_tokens,
+                    "turns": mem_turns,
+                }
+                # RAG is handled by the Document Search Tool dynamically
+                st.session_state.last_rag_metrics = {
+                    "chunks": 0,
+                    "score": 0.0,
+                    "time": 0.0,
+                }
+
+            tool_registry = ToolRegistry(rag_manager)
+            executor = AgentExecutor(agent, tool_registry)
+
+            wrapper = executor.run_react_stream(
+                user_question=final_q,
+                memory_context=mem_ctx,
+                status_callback=update_status,
+                show_reasoning=show_reasoning,
+            )
+
+            st.write_stream(wrapper)
+            status_placeholder.empty()
+
+            decision = executor.last_decision
+            st.session_state.last_decision = decision
+
+        else:
+            # --- Standard RAG Mode ---
+            with st.spinner("🔍 Retrieving semantic context and memory…"):
+                context_str, sim_score, ret_time, n_chunks = (
+                    rag_manager.retrieve_context(final_q)
+                )
+                mem_ctx, mem_tokens, mem_turns = memory_manager.get_context(
+                    st.session_state.chat_history, max_turns=3, max_tokens=1500
+                )
+
+                st.session_state.last_rag_metrics = {
+                    "chunks": n_chunks,
+                    "score": sim_score,
+                    "time": ret_time,
+                }
+                st.session_state.last_memory_metrics = {
+                    "hit": mem_turns > 0,
+                    "tokens": mem_tokens,
+                    "turns": mem_turns,
+                }
+
+            prompt = (
+                f"You are an AI assistant. Answer the user's question using the Document Context below.\n\n"
+                f"Document Context:\n{context_str}\n\n"
+            )
+            if mem_ctx:
+                prompt += f"Recent Conversation History:\n{mem_ctx}\n\n"
+
+            prompt += f"Current Question:\n{final_q}"
+
+            wrapper = agent.run_stream(prompt, status_callback=update_status)
+
+            st.write_stream(wrapper)
+            status_placeholder.empty()
+
+            decision = wrapper.final_decision
+            st.session_state.last_decision = decision
 
         if decision.response.success:
+            tokens = (
+                decision.response.token_usage.get("output_tokens", 0)
+                if decision.response.token_usage
+                else 0
+            )
+            if decision.response.response_time > 0 and tokens > 0:
+                tokens_per_sec = tokens / decision.response.response_time
+            else:
+                tokens_per_sec = 0.0
+
+            rag_metrics = st.session_state.get("last_rag_metrics", {})
+            mem_metrics = st.session_state.get("last_memory_metrics", {})
+            db_manager.log_query(
+                provider=decision.response.provider,
+                latency=decision.response.response_time,
+                rag_time=rag_metrics.get("time", 0.0),
+                similarity_score=rag_metrics.get("score", 0.0),
+                fallback_used=decision.fallback_used,
+                memory_hit=mem_metrics.get("hit", False),
+                memory_tokens=mem_metrics.get("tokens", 0),
+                chat_turns=mem_metrics.get("turns", 0),
+                first_token_time=decision.response.first_token_time,
+                tokens_per_sec=tokens_per_sec,
+            )
+            db_manager.log_provider(
+                provider_name=decision.response.provider,
+                success=True,
+                error_msg="",
+                response_time=decision.response.response_time,
+            )
             telegram_logger.log_query(
                 document_name=st.session_state.file_name,
                 question=final_q,
@@ -302,6 +417,12 @@ if final_q:
             st.rerun()
         else:
             err = decision.response.error or ""
+            db_manager.log_provider(
+                provider_name=decision.selected_provider,
+                success=False,
+                error_msg=err,
+                response_time=decision.response.response_time,
+            )
             telegram_logger.log_error(
                 provider=decision.selected_provider, error_msg=err
             )
