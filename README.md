@@ -45,8 +45,6 @@ Engineered an autonomous AI Agent platform integrating Enterprise RAG, ChromaDB 
 | 🧠 **Intelligent Agent Routing** | Automatically classifies queries (Coding, Reasoning, General) to pick the best model. |
 | 🛡️ **Automatic Fallback System** | Seamlessly reroutes failed API requests (e.g., 429 Quota limits) to backup providers. |
 | 📄 **PDF Document Analysis** | Extracts and processes text from large PDF documents using `pypdf`. |
-| ⚡ **Hash-Based Vector Caching** | Calculates MD5 checksums of uploads to instantly hit ChromaDB cache for previously uploaded files. |
-| 🔄 **Incremental Vector Batching** | Uses yielding generators to chunk and embed documents in batches, updating a live Streamlit progress UI without freezing the main thread. |
 | 🔍 **AI Decision Transparency** | An expander panel reveals *why* a model was chosen, token usage, and latency. |
 | ⚡ **Real-Time Model Selection** | Toggle between "Auto Agent" mode or manually force a specific LLM to respond. |
 | 🎨 **Modern UI/UX** | Premium Dark-mode Streamlit interface with glassmorphism effects and animations. |
@@ -105,7 +103,6 @@ graph TD
 | **Frontend** | ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white) HTML5, CSS3 |
 | **Backend** | ![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white) |
 | **AI Models** | ![Gemini](https://img.shields.io/badge/Gemini_1.5_Flash-4285F4?style=flat-square&logo=google&logoColor=white) ![Groq](https://img.shields.io/badge/Groq_LLaMA_3.1-F55036?style=flat-square&logo=groq&logoColor=white) ![OpenRouter](https://img.shields.io/badge/OpenRouter-10B981?style=flat-square) ![HuggingFace](https://img.shields.io/badge/Zephyr_7B-FFD21E?style=flat-square&logo=huggingface&logoColor=black) |
-| **Agent Tools** | `Tavily Search API`, `DuckDuckGo Search API`, `ChromaDB`, `AST Secure Calculator` |
 | **Tooling** | `PyPDF`, `python-dotenv`, `requests`, `pytest`, `flake8`, `black` |
 
 </div>
@@ -126,11 +123,9 @@ AI-DOC-ASSISTANT/
 │   └── openrouter_provider.py
 ├── services/            # Core Engine & Routing Logic
 │   ├── agent_engine.py      # Orchestration
-│   ├── agent_executor.py    # ReAct Agent Loop
 │   ├── ai_router.py         # Factory
 │   ├── fallback_manager.py  # Chain-of-Responsibility
-│   ├── task_classifier.py   # Intent Analysis
-│   └── tool_registry.py     # Tool Definitions (Tavily, DDG, Calculator)
+│   └── task_classifier.py   # Intent Analysis
 ├── utils/               # UI Helpers & Formatting
 │   └── helpers.py
 ├── app.py               # Main Streamlit Interface

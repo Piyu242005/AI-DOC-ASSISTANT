@@ -17,7 +17,7 @@ class RAGManager:
         )
 
     def _chunk_text(
-        self, text: str, chunk_size: int = 1500, overlap: int = 100
+        self, text: str, chunk_size: int = 1000, overlap: int = 200
     ) -> list:
         """Splits text into chunks of specified size with overlap."""
         chunks = []
@@ -31,89 +31,30 @@ class RAGManager:
             start = start + chunk_size - overlap
         return chunks
 
-    def index_document(self, document_text: str, file_hash: str = None):
+    def index_document(self, document_text: str) -> int:
         """
-        Chunks the document and stores it in the vector database incrementally.
-        Yields progress updates: (progress_percent, message, is_cache_hit, total_chunks, time_taken)
+        Chunks the document and stores it in the vector database.
+        Resets the collection for a fresh document session.
         """
-        start_time = time.time()
-
-        # Use hash-based collection name if provided
-        collection_name = f"doc_{file_hash}" if file_hash else "document_context"
-        self.collection_name = collection_name
-
-        # Check cache
-        try:
-            self.collection = self.client.get_collection(name=self.collection_name)
-            count = self.collection.count()
-            if count > 0:
-                # Cache Hit!
-                yield (
-                    100,
-                    "⚡ Document already indexed",
-                    True,
-                    count,
-                    time.time() - start_time,
-                )
-                return
-        except Exception:
-            pass  # Collection does not exist
-
-        # Cache Miss
-        yield (10, "📖 Extracting Text...", False, 0, 0)
-
+        # Reset collection for the new document
         try:
             self.client.delete_collection(self.collection_name)
         except Exception:
             pass
-
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name
         )
 
-        yield (25, "✂️ Creating Chunks...", False, 0, 0)
-
         chunks = self._chunk_text(document_text)
-        total_chunks = len(chunks)
         if not chunks:
-            yield (
-                100,
-                "❌ No text found in document.",
-                False,
-                0,
-                time.time() - start_time,
-            )
-            return
+            return 0
 
-        ids = [f"chunk_{i}" for i in range(total_chunks)]
+        # Create unique IDs for each chunk
+        ids = [f"chunk_{i}" for i in range(len(chunks))]
 
-        # Batch processing (100 chunks at a time)
-        batch_size = 100
-        for i in range(0, total_chunks, batch_size):
-            batch_chunks = chunks[i : i + batch_size]
-            batch_ids = ids[i : i + batch_size]
-
-            # Scale progress from 25% to 95% during embedding
-            progress_percent = 25 + int((i / total_chunks) * 70)
-            yield (
-                progress_percent,
-                f"🧠 Generating Embeddings... ({min(i + batch_size, total_chunks)}/{total_chunks})",
-                False,
-                total_chunks,
-                0,
-            )
-
-            # ChromaDB handles generating embeddings synchronously via all-MiniLM-L6-v2 here
-            self.collection.add(documents=batch_chunks, ids=batch_ids)
-
-        # Final success yield
-        yield (
-            100,
-            "💾 Building Vector Index... 100%",
-            False,
-            total_chunks,
-            time.time() - start_time,
-        )
+        # Add to ChromaDB (automatically uses all-MiniLM-L6-v2 embeddings)
+        self.collection.add(documents=chunks, ids=ids)
+        return len(chunks)
 
     def retrieve_context(self, query: str, k: int = 5):
         """
