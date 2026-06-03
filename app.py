@@ -189,7 +189,7 @@ if uploaded.name != st.session_state.file_name:
     st.session_state.doc_text = text
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
-    
+
     # Log the upload to Telegram
     telegram_logger.log_upload(uploaded.name, uploaded.size, len(reader.pages))
 
@@ -274,7 +274,7 @@ if final_q:
                 question=final_q,
                 provider=decision.response.provider,
                 response_time=decision.response.response_time,
-                fallback_used=decision.fallback_used
+                fallback_used=decision.fallback_used,
             )
             st.session_state.chat_history.append({"role": "user", "content": final_q})
             st.session_state.chat_history.append(
@@ -287,7 +287,9 @@ if final_q:
             st.rerun()
         else:
             err = decision.response.error or ""
-            telegram_logger.log_error(provider=decision.selected_provider, error_msg=err)
+            telegram_logger.log_error(
+                provider=decision.selected_provider, error_msg=err
+            )
             if "429" in err or "quota" in err.lower():
                 st.error(
                     "⚠️ **Quota Exceeded (429)** — Free tier limit reached.\n\n"
