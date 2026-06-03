@@ -73,6 +73,25 @@ col13.metric("🚀 Avg Tokens / Second", avg_tps)
 col14.metric("📊 Stream Success Rate", f"{stream_success_rate}%")
 
 st.divider()
+st.subheader("🔍 Web Search Telemetry")
+
+col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
+total_searches = db.get_total_searches()
+col_s1.metric("🔍 Total Searches", total_searches)
+
+avg_search_time = db.get_average_search_time()
+col_s2.metric("⚡ Avg Search Time", f"{avg_search_time:.2f}s")
+
+tavily_searches = db.get_tavily_searches()
+col_s3.metric("📊 Tavily Usage", tavily_searches)
+
+ddg_searches = db.get_ddg_searches()
+col_s4.metric("📊 DuckDuckGo Usage", ddg_searches)
+
+search_fallback_rate = db.get_search_fallback_rate()
+col_s5.metric("🔄 Fallback Rate", f"{search_fallback_rate:.1f}%")
+
+st.divider()
 
 # --- Charts ---
 st.subheader("Interactive Analytics")
@@ -137,3 +156,39 @@ else:
         )
         fig_rag.update_layout(bargap=0.1)
         st.plotly_chart(fig_rag, use_container_width=True)
+
+    c5, c6 = st.columns(2)
+
+    with c5:
+        st.write("**Search Provider Usage**")
+        df_search_usage = db.get_search_provider_usage_df()
+        if not df_search_usage.empty:
+            fig_search_usage = px.pie(
+                df_search_usage,
+                values="count",
+                names="provider",
+                color="provider",
+                labels={"count": "Number of Searches", "provider": "Search Provider"},
+            )
+            st.plotly_chart(fig_search_usage, use_container_width=True)
+        else:
+            st.info("No search provider data available yet.")
+
+    with c6:
+        st.write("**Search Performance by Provider**")
+        df_search_perf = db.get_search_performance_df()
+        if not df_search_perf.empty:
+            fig_search_perf = px.bar(
+                df_search_perf,
+                x="provider",
+                y="avg_search_time",
+                color="provider",
+                labels={
+                    "avg_search_time": "Average Search Time (s)",
+                    "provider": "Search Provider",
+                },
+            )
+            fig_search_perf.update_layout(showlegend=False)
+            st.plotly_chart(fig_search_perf, use_container_width=True)
+        else:
+            st.info("No search performance data available yet.")

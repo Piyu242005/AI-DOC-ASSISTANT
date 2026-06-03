@@ -73,6 +73,7 @@ for key, val in {
     "file_name": "",
     "last_rag_metrics": {},
     "last_memory_metrics": {},
+    "last_search_telemetry": None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -136,7 +137,7 @@ Built to demonstrate modern Generative AI, LLM orchestration, document intellige
         """)
 
     st.divider()
-    st.caption("Fallback chain: Groq → Gemini → OpenRouter → HF")
+    st.caption("🛡️ Autonomous Fallback & Recovery Engine | By Piyush Ramteke")
 
 # ── Build Providers ───────────────────────────────────────────────────────────
 providers = build_providers(api_keys)
@@ -198,6 +199,14 @@ show_reasoning = st.checkbox(
 )
 
 st.divider()
+st.markdown("### 🔍 Search Settings")
+st.radio(
+    "Search Provider",
+    ["Auto", "Tavily", "DuckDuckGo"],
+    index=0,
+    key="search_provider",
+    help="Auto uses Tavily if API key is available, falling back to DuckDuckGo.",
+)
 
 # PDF Upload
 st.subheader("📂 Upload Document")
@@ -377,6 +386,9 @@ if final_q:
                     "time": 0.0,
                 }
 
+            st.session_state.last_search_telemetry = None
+            st.session_state.status_callback = update_status
+
             tool_registry = ToolRegistry(rag_manager)
             executor = AgentExecutor(agent, tool_registry)
 
@@ -422,6 +434,9 @@ if final_q:
                 prompt += f"Recent Conversation History:\n{mem_ctx}\n\n"
 
             prompt += f"Current Question:\n{final_q}"
+
+            st.session_state.last_search_telemetry = None
+            st.session_state.status_callback = update_status
 
             wrapper = agent.run_stream(prompt, status_callback=update_status)
 
@@ -525,6 +540,19 @@ if st.session_state.last_decision:
             c2.metric("Similarity Score", f"{rag.get('score', 0):.2f}")
             c3.metric("Retrieval Time", f"{rag.get('time', 0):.2f}s")
             c4.metric("RAG Enabled", "Yes ✅")
+
+        search_tel = st.session_state.get("last_search_telemetry")
+        if search_tel:
+            st.divider()
+            st.subheader("🔍 Web Search Performance")
+            s1, s2, s3, s4 = st.columns(4)
+            s1.metric("Search Provider", search_tel.get("provider_used"))
+            s2.metric("Results Retrieved", search_tel.get("results_count", 0))
+            s3.metric("Search Time", f"{search_tel.get('search_time', 0.0):.2f}s")
+            s4.metric(
+                "Fallback Used",
+                "Yes ⚠️" if search_tel.get("fallback_used") else "No ✅",
+            )
 
         if d.fallback_log:
             st.write("**Fallback Log:**")

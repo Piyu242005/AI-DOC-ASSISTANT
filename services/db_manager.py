@@ -87,6 +87,19 @@ class DBManager:
                     timestamp DATETIME
                 )
             """)
+
+            # Web Searches Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS searches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query TEXT,
+                    provider_used TEXT,
+                    fallback_used BOOLEAN,
+                    search_time REAL,
+                    results_count INTEGER,
+                    timestamp DATETIME
+                )
+            """)
             conn.commit()
 
     def log_document(self, filename: str, pages: int, chunks: int, file_size: int):
@@ -257,3 +270,74 @@ class DBManager:
     def get_rag_performance_df(self) -> pd.DataFrame:
         with self._get_connection() as conn:
             return pd.read_sql_query("SELECT rag_time FROM queries", conn)
+
+    # --- Search Analytics Methods ---
+
+    def log_search(
+        self,
+        query: str,
+        provider_used: str,
+        fallback_used: bool,
+        search_time: float,
+        results_count: int,
+    ):
+        with self._get_connection() as conn:
+            conn.execute(
+                "INSERT INTO searches (query, provider_used, fallback_used, search_time, results_count, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    query,
+                    provider_used,
+                    fallback_used,
+                    search_time,
+                    results_count,
+                    datetime.now(),
+                ),
+            )
+
+    def get_total_searches(self) -> int:
+        with self._get_connection() as conn:
+            res = conn.execute("SELECT COUNT(*) FROM searches").fetchone()
+            return res[0] if res else 0
+
+    def get_average_search_time(self) -> float:
+        with self._get_connection() as conn:
+            res = conn.execute("SELECT AVG(search_time) FROM searches").fetchone()
+            return res[0] if res and res[0] else 0.0
+
+    def get_tavily_searches(self) -> int:
+        with self._get_connection() as conn:
+            res = conn.execute(
+                "SELECT COUNT(*) FROM searches WHERE provider_used = 'Tavily'"
+            ).fetchone()
+            return res[0] if res else 0
+
+    def get_ddg_searches(self) -> int:
+        with self._get_connection() as conn:
+            res = conn.execute(
+                "SELECT COUNT(*) FROM searches WHERE provider_used = 'DuckDuckGo'"
+            ).fetchone()
+            return res[0] if res else 0
+
+    def get_search_fallback_rate(self) -> float:
+        with self._get_connection() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM searches").fetchone()[0]
+            if total == 0:
+                return 0.0
+            fallbacks = conn.execute(
+                "SELECT COUNT(*) FROM searches WHERE fallback_used = 1"
+            ).fetchone()[0]
+            return (fallbacks / total) * 100
+
+    def get_search_provider_usage_df(self) -> pd.DataFrame:
+        with self._get_connection() as conn:
+            return pd.read_sql_query(
+                "SELECT provider_used as provider, COUNT(*) as count FROM searches GROUP BY provider_used ORDER BY count DESC",
+                conn,
+            )
+
+    def get_search_performance_df(self) -> pd.DataFrame:
+        with self._get_connection() as conn:
+            return pd.read_sql_query(
+                "SELECT provider_used as provider, AVG(search_time) as avg_search_time FROM searches GROUP BY provider_used",
+                conn,
+            )
