@@ -9,3 +9,9 @@ plotly
 pandas
 duckduckgo-search
 tavily-python
+pytest
+black
+isort
+flake8
+bandit
+pre-commit

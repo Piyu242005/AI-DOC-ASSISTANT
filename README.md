@@ -1,3 +1,4 @@
+![CI](https://github.com/Piyu242005/NeuraFlow-AI/actions/workflows/ci.yml/badge.svg)
 <div align="center">
 
 # 🧠 NeuraFlow AI
@@ -227,3 +228,15 @@ streamlit run app.py
 <div align="center">
   <sub>Built with ❤️ using Python, Streamlit, and modern Generative AI.</sub>
 </div>
+
+## ?? DevOps & CI/CD
+
+- GitHub Actions CI/CD
+- Automated Linting & Formatting
+- Security Scanning (Bandit)
+- Dockerized Deployment
+- Docker Compose Support
+- Health Checks
+- Dependency Validation
+- Automated Testing Pipeline
+
