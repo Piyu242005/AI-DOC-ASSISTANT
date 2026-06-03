@@ -1,8 +1,9 @@
 # flake8: noqa: E501
 import os
 import threading
-import requests
 from datetime import datetime
+
+import requests
 import streamlit as st
 
 
