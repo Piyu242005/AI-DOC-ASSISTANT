@@ -110,7 +110,6 @@ class MultiSearchTool(BaseTool):
 
     def run(self, action_input: str) -> str:
         import os
-        import time
 
         import streamlit as st
 
