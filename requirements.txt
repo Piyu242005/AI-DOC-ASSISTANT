@@ -15,3 +15,4 @@ isort
 flake8
 bandit
 pre-commit
+protobuf==3.20.3
