@@ -12,13 +12,15 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 
 from services.ai_router import build_providers, get_agent
+from services.rag_engine import RAGManager
 from services.telegram_logger import TelegramLogger
 from utils.helpers import format_token_usage, task_type_label
 
 load_dotenv(override=True)
 
-# Initialize Telegram Logger
+# Initialize global services
 telegram_logger = TelegramLogger()
+rag_manager = RAGManager()
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -61,6 +63,7 @@ for key, val in {
     "chat_history": [],
     "doc_text": "",
     "file_name": "",
+    "last_rag_metrics": {},
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -181,11 +184,13 @@ if not uploaded:
 
 # Extract text on new upload
 if uploaded.name != st.session_state.file_name:
-    with st.spinner("Reading document…"):
+    with st.spinner("Reading and indexing document (RAG)…"):
         reader = PdfReader(uploaded)
-        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())[
-            :15000
-        ]
+        text = "".join(p.extract_text() for p in reader.pages if p.extract_text())
+
+        # Index document in ChromaDB
+        num_chunks = rag_manager.index_document(text)
+
     st.session_state.doc_text = text
     st.session_state.file_name = uploaded.name
     st.session_state.chat_history = []
@@ -256,9 +261,19 @@ if final_q:
     if not providers:
         st.error("❌ No providers configured. Add at least one API key in the sidebar.")
     else:
+        with st.spinner("🔍 Retrieving semantic context…"):
+            context_str, sim_score, ret_time, n_chunks = rag_manager.retrieve_context(
+                final_q
+            )
+            st.session_state.last_rag_metrics = {
+                "chunks": n_chunks,
+                "score": sim_score,
+                "time": ret_time,
+            }
+
         prompt = (
-            f"Answer the question using the document below.\n\n"
-            f"Document:\n{st.session_state.doc_text}\n\n"
+            f"Answer the question using the document context below.\n\n"
+            f"Document Context:\n{context_str}\n\n"
             f"Question:\n{final_q}"
         )
         agent = get_agent(providers, mode=mode)
@@ -316,6 +331,16 @@ if st.session_state.last_decision:
         col6.metric("Fallback Used", "Yes ⚠️" if d.fallback_used else "No ✅")
 
         st.info(f"💡 **Routing reason:** {d.reason}")
+
+        rag = st.session_state.get("last_rag_metrics", {})
+        if rag:
+            st.divider()
+            st.subheader("📚 Retrieval-Augmented Generation (RAG)")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Retrieved Chunks", rag.get("chunks", 0))
+            c2.metric("Similarity Score", f"{rag.get('score', 0):.2f}")
+            c3.metric("Retrieval Time", f"{rag.get('time', 0):.2f}s")
+            c4.metric("RAG Enabled", "Yes ✅")
 
         if d.fallback_log:
             st.write("**Fallback Log:**")
