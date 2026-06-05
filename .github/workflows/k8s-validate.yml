@@ -1,0 +1,24 @@
+name: Kubernetes Validate
+
+on:
+  push:
+    paths:
+      - 'k8s/**'
+  pull_request:
+    paths:
+      - 'k8s/**'
+
+jobs:
+  k8s-validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Validate Kubernetes Manifests
+      run: |
+        kubectl apply --dry-run=client -f k8s/

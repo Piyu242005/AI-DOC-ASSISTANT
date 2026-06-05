@@ -2,9 +2,12 @@
 .github
 __pycache__
 *.pyc
-.env
 venv
-.venv
-.chroma_db
-analytics.db
-.streamlit
+.env
+node_modules
+dist
+.vscode
+.devcontainer
+*.db
+chroma_db/
+assets/happy-retro-robot.gif

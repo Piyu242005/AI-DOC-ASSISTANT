@@ -63,34 +63,19 @@ graph TD
     classDef llm fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef fallback fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff,rx:8px,ry:8px;
     classDef engine fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef telemetry fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef db fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef rag fill:#f43f5e,stroke:#e11d48,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef infra fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff,rx:8px,ry:8px;
 
-    U(("👤 User")):::user -->|"Uploads PDF"| EXT["📄 Text Extraction & Chunking"]:::rag
-    EXT -->|"Embeds"| CHROMA[("🗄️ ChromaDB Vector Store")]:::db
+    U(("👤 User")):::user -->|"HTTPS Request"| ING["🌐 Ingress"]:::infra
+    ING -->|"Routes Traffic"| K8S["☸️ Kubernetes (HPA Auto-Scaling)"]:::infra
+    K8S -->|"Load Balances"| UI["🖥️ Streamlit UI & FastAPI"]:::engine
     
-    U -->|"Asks Question"| SEM["🔍 Agent Executor (ReAct)"]:::router
-    SEM -->|"Accesses Memory"| MEM["💭 Conversation Memory"]:::router
-    MEM -->|"Context + History + Question"| R["🧠 Intelligent AI Router"]:::router
+    UI -->|"Asks Question"| R["🧠 Intelligent AI Router"]:::router
     R -->|"Classifies Task & Selects Provider"| FE["⚙️ Fallback Execution Engine"]:::fallback
     
     FE -.->|"Stream 1"| G["⚡ Groq LLaMA 3.1"]:::llm
     FE -.->|"Stream 2"| GEM["🔵 Gemini 1.5 Flash"]:::llm
     FE -.->|"Stream 3"| OR["🌐 OpenRouter"]:::llm
     FE -.->|"Stream 4"| HF["🤗 Hugging Face"]:::llm
-    
-    G & GEM & OR & HF -->|"Yields Thought/Action"| WR["🔄 Stream Wrapper"]:::engine
-    WR -->|"Detects Tool Action"| TR["🛠️ Tool Registry"]:::router
-    TR -->|"Executes Calculator / Web Search / Document Search"| TR
-    TR -->|"Observation"| R
-    
-    WR -->|"Streams Final Answer"| RE["📊 Live UI Streaming"]:::engine
-    RE -->|"Displays Tokens"| U
-
-    TL["📡 Telegram & SQLite Analytics"]:::telemetry
-    EXT -.->|"Logs Upload"| TL
-    WR -.->|"Logs Performance Metadata"| TL
 ```
 
 ---
@@ -229,14 +214,22 @@ streamlit run app.py
   <sub>Built with ❤️ using Python, Streamlit, and modern Generative AI.</sub>
 </div>
 
-## ?? DevOps & CI/CD
+## 🛠️ DevOps & Enterprise Infrastructure
 
-- GitHub Actions CI/CD
-- Automated Linting & Formatting
-- Security Scanning (Bandit)
-- Dockerized Deployment
-- Docker Compose Support
-- Health Checks
-- Dependency Validation
-- Automated Testing Pipeline
+NeuraFlow AI is built with production-grade reliability, containerization, and scaling in mind.
 
+- **🐳 Docker**: Multi-stage, non-root user image optimized with layer caching and slim Python 3.11 base.
+- **☸️ Kubernetes**: Fully orchestrated deployment featuring:
+  - Rolling updates with 3 minimum replicas
+  - `HorizontalPodAutoscaler` (HPA) configured to auto-scale up to 10 pods based on 70% CPU usage
+  - Secure API Key management using Kubernetes Secrets
+  - Nginx Ingress routing (`neuraflow.ai`) with Strict Security Headers and HTTPS support
+- **🔄 CI/CD (GitHub Actions)**:
+  - Automated Linting (`ruff`, `flake8`, `black`) and Security Scanning (`bandit`)
+  - Automated `pytest` unit testing
+  - Container build and push pipeline (`docker-build.yml`)
+  - Automated Kubernetes manifest validation (`k8s-validate.yml`)
+- **📈 Monitoring & Reliability**:
+  - Live HTTP health and readiness probes (`/_stcore/health`)
+  - Prometheus metrics configuration for node and pod monitoring
+  - Automatic fallback execution logic if an API endpoint goes down
